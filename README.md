@@ -4,29 +4,31 @@ author:nwaglechner@gmail.com
 
 # Basic Setup
 
-```git clone https://github.com/waglecn/mabs.git```
+<git clone https://github.com/waglecn/mabs.git>
 
 Conda and snakemake
 
 Miniconda available from:
 https://docs.conda.io/en/latest/miniconda.html
 
-Python 3.8 Miniconda
-```wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-```bash Miniconda3-latest-Linux-X86_64.sh```
+Python 3.7.7 Miniconda  
+<wget https://repo.anaconda.com/miniconda/>
 
-```conda env create --name mabs --file environment.yaml```
-```conda activate mabs```
+Miniconda3-latest-Linux-x86_64.sh  
+<bash Miniconda3-latest-Linux-X86_64.sh
+conda env create --name mabs --file environment.yaml
+conda activate mabs>
 
 ## Required files:
 	- adapters for trimming - see config.yaml
 		- look for adapter files bundled with trimmomatic, ie.
-	```locate TruSeq3-PE.fa```
-	- Kraken database - <ftp://ftp.ccb.jhu.edu/pub/data/kraken2_dbs/>
-	```wget ftp://ftp.ccb.jhu.edu/pub/data/kraken2_dbs/minikraken_8GB_202003.tgz```
+	<locate TruSeq3-PE.fa>
+	- Kraken database 
+<ftp://ftp.ccb.jhu.edu/pub/data/kraken2_dbs/>
+<wget ftp://ftp.ccb.jhu.edu/pub/data/kraken2_dbs/minikraken_8GB_202003.tgz>
 
 
-#TODO 200902
+# TODO 200902
 
 - download internal project data - deferred
 	- configurable data-dir - 200914
