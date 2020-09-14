@@ -26,12 +26,13 @@ conda activate mabs
 ```
 
 ## Required files:
-	- adapters for trimming - see config.yaml
-		- look for adapter files bundled with trimmomatic, ie.
+
+- adapters for trimming - see config.yaml
+	- look for adapter files bundled with trimmomatic, ie.
 ```bash
 locate TruSeq3-PE.fa
 ```
-	- Kraken database 
+- Kraken database 
 ftp://ftp.ccb.jhu.edu/pub/data/kraken2_dbs/
 ```bash
 wget ftp://ftp.ccb.jhu.edu/pub/data/kraken2_dbs/minikraken_8GB_202003.tgz
