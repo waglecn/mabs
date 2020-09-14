@@ -1,0 +1,18 @@
+# Mycobacteroides NCBItaxid:670516
+target_species_taxid: 670516
+# base location of internal sample read data
+data_dir: "0-data"
+# Replace this with the sample sheet for your own samples, see provided example
+# for the format
+sample_sheet: "samples.test.csv"
+# copied from a local installation of Trimmomatic - don't know where the
+# adapter files live in conda-land
+adapters_fasta: "resources/TruSeq3-PE.fa"
+# a directory, downloaded from kraken2 ftp - see Required Files in readme.md
+kraken_db: "minikraken2_v2_8GB_201904_UPDATE/"
+# This is my system-managed tmp on a fast SSD, shovill faster
+shovill_tempdir: "/tmp"
+# A tempdir can get quite large, running out of space is a failure point
+mashtree_tempdir: "mashtree_tmp"
+# This sequence is the definitional Erm(41) in Nash et al 2009 (PMID:19171799)
+erm41_query: "resources/Erm41.fa"
