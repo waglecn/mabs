@@ -2,7 +2,8 @@ channels:
   - conda-forge
   - bioconda
 dependencies:
-  - bioconda::snakemake-minimal =5.23.0
+  - pandas =1.1.1
+  - bioconda::snakemake-minimal =5.22.1
   - matplotlib =3.3.1
   - graphviz =2.38.0
   - bioconda::bcftools =1.9
