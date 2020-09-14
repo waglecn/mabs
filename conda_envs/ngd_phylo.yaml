@@ -1,0 +1,8 @@
+channels:
+    - conda-forge
+    - bioconda
+dependencies:
+    - bioconda::ncbi-genome-download
+    - bioconda::ete3
+    - bioconda::trimmomatic
+    - bioconda::mlst
