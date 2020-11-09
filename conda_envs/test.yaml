@@ -3,5 +3,4 @@ channels:
     - bioconda
 dependencies:
     - bioconda::ncbi-genome-download
-    - bioconda::ete3
     - bioconda::mlst

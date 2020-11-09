@@ -2,4 +2,4 @@ channels:
     - conda-forge
     - bioconda
 dependencies:
-    - bioconda::shovill
+    - bioconda::shovill =1.1.0

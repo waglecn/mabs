@@ -1,0 +1,11 @@
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.6
+  - bioconda::biopython
+  - bioconda::ete3
+  - seaborn
+  - statsmodels
+  - fastcluster
+  - bioconda::snp-dists
