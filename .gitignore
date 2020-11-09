@@ -6,6 +6,17 @@ __pycache__/
 # C extensions
 *.so
 
+notes.md
+resources/gatk-registered
+samples.csv*
+samples.*.csv*
+*kraken2*/*
+mashtree_tmp/
+external/
+*.sublime-project
+*.sublime-workspace
+.snakemake/
+
 # Distribution / packaging
 .Python
 build/

@@ -2,7 +2,8 @@ channels:
   - conda-forge
   - bioconda
 dependencies:
-  - pandas =1.1.1
+  - python >=3.6
+  - pandas
   - bioconda::snakemake-minimal =5.22.1
   - matplotlib =3.3.1
   - graphviz =2.38.0
@@ -10,3 +11,4 @@ dependencies:
   - bioconda::samtools =1.9
   - bwa =0.7.17
   - pysam =0.15.0
+  - bioconda::ete3
