@@ -22,5 +22,5 @@ mashtree_tempdir: "mashtree_tmp"
 erm41_query: "resources/Erm41.fa"
 # <https://www.ncbi.nlm.nih.gov/nuccore/NC_000962.3>
 outgroup_assembly: "GCF_000195955.2"
-
+# directroy for all results
 results_dir: "results"
