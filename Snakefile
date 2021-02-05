@@ -2,10 +2,23 @@ import os
 import pandas
 import glob
 
-configfile: "config.yaml"
-exec_dir = os.getcwd()
-workdir: config['results_dir']
+# configfile: "config.syn.yaml"
+if len(config) == 0:
+    exit('no configfile specified: use --configfile [file]')
 
+# TODO -- from
+"""
+from https://snakemake.readthedocs.io/en/v5.22.1/snakefiles/configuration.html#validation
+""" # noqa
+# validate(config, "config.schema.yaml")
+# samples = pd.read_table(config["samples"]).set_index("sample", drop=False)
+# validate(samples, "samples.schema.yaml")
+
+exec_dir = os.getcwd()
+print(f"executing from: {exec_dir}", file=sys.stderr)
+
+workdir: config['results_dir']
+mash_ass = config['mash_ref_taxa']
 # samples = pandas.read_table(config['sample_sheet'], sep=',', header=None)
 
 # see line above, this is an ugly way to load the sample sheet, pandas
@@ -19,15 +32,17 @@ sample_dict = {sample[0]: sample[1:] for sample in samples}
 sample_names = sample_dict.keys()
 
 filt_samples = list(sample_names)
-excluded_samples = [
-    '29-3L', '29-3K', '29-2Z', '29-2L', '29-G', '27-D', '25-U', '25-J', '20-E',
-    '19-A', '19-B', '17-F_2', '17-E', '17-B_combined', '16-A', '14-U', '14-F',
-]
-# for name in excluded_samples:
-#     filt_samples.remove(name)
+stage2_excluded_samples = config['exclude_samples']
+for name in stage2_excluded_samples:
+    try:
+        filt_samples.remove(name)
+    except Exception as e:
+        print(
+            'to_exclude {} not found in sample_sheet'.format(name),
+            file=sys.stderr
+        )
 
 
-# helper function definitions
 def input_files(sample_name, read):
     '''
     This function parses the sample sheet csv and provides the sample_names
@@ -52,12 +67,14 @@ def input_files(sample_name, read):
         ]
     else:
         exit('Uh oh.')
-    # print(fastqs)
-    return sorted([
+
+    reads = sorted([
         os.path.abspath(
             os.path.join(exec_dir, config['data_dir'], fastq)
         ) for fastq in fastqs
     ])
+    # print(reads)
+    return reads
 
 
 def MRCA_mapped_ref_input(sample_name):
@@ -69,7 +86,10 @@ def MRCA_mapped_ref_input(sample_name):
             ref_name: should match available references
     '''
     from scripts.tree_MRCA import tree_MRCA
-    return tree_MRCA('mashtree/assembly_mashtree.complete.tree', sample_name)
+    return tree_MRCA(
+        '{}/results/mashtree/assembly_mashtree.complete.tree'.format(exec_dir),
+        sample_name
+    )
 
 
 # Rule "all" default catches output of other rules as input in order to
@@ -206,23 +226,23 @@ rule stage2:
             "MRCA_ref_mapping/{ref}/{sample}.RG_SC.bam".format(
                 ref=MRCA_mapped_ref_input(s),
                 sample=s
-            ) for s in sample_names
+            ) for s in filt_samples
         ],
         # gatk realignment
         [
             "MRCA_ref_mapping/{ref}/{sample}.RG_SC_RA.intervals".format(
                 ref=MRCA_mapped_ref_input(s), sample=s
-            ) for s in sample_names
+            ) for s in filt_samples
         ],
         [
             "MRCA_ref_mapping/{ref}/{sample}.RG_SC_RA.bam".format(
                 ref=MRCA_mapped_ref_input(s), sample=s
-            ) for s in sample_names
+            ) for s in filt_samples
         ],
         [
             "MRCA_ref_mapping/{ref}/{sample}.RG_SC_RA_MQ30_BAQ.mpileup".format(
                 ref=MRCA_mapped_ref_input(s), sample=s
-            ) for s in sample_names
+            ) for s in filt_samples
         ],
 
 rule with_realignment:
@@ -231,24 +251,30 @@ rule with_realignment:
             "MRCA_ref_mapping/{ref}/{sample}"
             ".RG_SC_RA_MQ30_BAQ50_DP20_SP60_AD1.vcf".format(
                 ref=MRCA_mapped_ref_input(s), sample=s
-            ) for s in sample_names
+            ) for s in filt_samples
+        ],
+        [
+            "MRCA_ref_mapping/{ref}/{sample}"
+            ".RG_SC_RA_MQ30_BAQ50_DP20_SP60_AD1_DF.bed".format(
+                ref=MRCA_mapped_ref_input(s), sample=s
+            ) for s in filt_samples
         ],
         [
             "MRCA_ref_mapping/{ref}/{sample}"
             ".RG_SC_RA_MQ30_BAQ50_DP20_SP60_AD1.failed.vcf".format(
                 ref=MRCA_mapped_ref_input(s), sample=s
-            ) for s in sample_names
+            ) for s in filt_samples
         ],
         [
             "MRCA_ref_mapping/{ref}/{sample}"
             ".RG_SC_RA_MQ30_BAQ50_DP20_SP60_AD1.AD_failed.vcf".format(
                 ref=MRCA_mapped_ref_input(s), sample=s
-            ) for s in sample_names
+            ) for s in filt_samples
         ],
         [
             "MRCA_ref_mapping/{ref}/{sample}.RG_SC_RA.0cov.bed".format(
                 ref=MRCA_mapped_ref_input(s), sample=s
-            ) for s in sample_names
+            ) for s in filt_samples
         ],
         expand(
             "{exec_dir}/resources/alignment_references/{ref}.PE_PPE.bed",
@@ -258,26 +284,39 @@ rule with_realignment:
         [
             "MRCA_ref_mapping/{ref}/{sample}.RG_SC_RA.merge.bed".format(
                 ref=MRCA_mapped_ref_input(s), sample=s
-            ) for s in sample_names
+            ) for s in filt_samples
         ],
         [
             "MRCA_ref_mapping/{ref}/{sample}.RG_SC_RA_"
             "MQ30_BAQ50_DP20_SP60_AD1_DF.vcf.gz".format(
                 ref=MRCA_mapped_ref_input(s), sample=s
-            ) for s in sample_names
+            ) for s in filt_samples
         ],
         [
             "MRCA_ref_mapping/{ref}/{sample}.RG_SC_RA_"
             "MQ30_BAQ50_DP20_SP60_AD1_DF_BedFilter.vcf.gz".format(
                 ref=MRCA_mapped_ref_input(s), sample=s
-            ) for s in sample_names
+            ) for s in filt_samples
         ],
         [
             "MRCA_ref_mapping/{ref}/{sample}.RG_SC_RA_"
             "MQ30_BAQ50_DP20_SP60_AD1_DF_BedFilter.hvar.vcf.gz".format(
                 ref=MRCA_mapped_ref_input(s), sample=s
-            ) for s in sample_names
+            ) for s in filt_samples
         ],
+        [
+            "MRCA_ref_mapping/{ref}/{sample}.RG_SC_RA_"
+            "MQ30_BAQ50_DP20_SP60_AD1_DF_BedFilter_hvar"
+            ".consensus.fasta".format(
+                ref=MRCA_mapped_ref_input(s), sample=s
+            ) for s in filt_samples
+        ],
+        [
+            "gubbins/{ref}/{sample}.RG_SC_RA_MQ30_BAQ50_DP20_SP60_AD1_DF_"
+            "BedFilter_hvar.consensus.fasta".format(
+                ref=MRCA_mapped_ref_input(s), sample=s
+            ) for s in filt_samples
+        ]
 
 rule SNP_alignment:
     input:
@@ -347,9 +386,9 @@ checkpoint refseq_outgroup_download:
         outgroup = config['outgroup_assembly'],
         execdir = exec_dir
     output:
-        directory("{params.execdir}/external/refseq/outgroup/")
+        directory("external/refseq/outgroup/")
     log:
-        "{params.execdir}/external/refseq_outgroup_download.log"
+        "external/refseq_outgroup_download.log"
     shell:
         "ngd -s refseq -r3 --flat-output -A {params.outgroup} -F genbank "
         "-o {output} bacteria ; "
@@ -363,10 +402,7 @@ rule download_refseq_taxlist:
         taxid = config['target_species_taxid'],
         execdir = exec_dir
     output:
-        "{}/external/taxid{}.target.taxlist".format(
-            exec_dir,
-            config['target_species_taxid']
-        )
+        "external/taxid{params.taxid}.target.taxlist"
     shell:
         "python {params.execdir}/scripts/gimme-taxa.py -j "
         "{params.taxid} > {output}"
@@ -375,21 +411,19 @@ checkpoint refseq_complete_genome_download:
     conda:
         'conda_envs/ngd_phylo.yaml'
     params:
+        taxid = config['target_species_taxid'],
         execdir = exec_dir
     input:
-        "{}/external/taxid{}.target.taxlist".format(
-            exec_dir,
-            config['target_species_taxid']
-        )
+        "external/taxid{params.taxid}.target.taxlist"
     log:
-        "{}/external/refseq_complete_download.log".format(exec_dir)
+        "external/refseq_complete_download.log"
     output:
-        directory("{}/external/refseq/complete/".format(exec_dir)),
+        directory("external/refseq/complete/"),
         # a non-dynamic output may not exist with dynamic output
     shell:
-        "ngd -s refseq -r 3 -p 3 -o {output} "
+        "ngd -v -s refseq -r 3 -p 3 -o {output} "
         "-t {input} --flat-output -F genbank "
-        "-m {params.execdir}/external/complete.refseq.meta "
+        "-m external/complete.refseq.meta "
         "-l complete bacteria ; "
         "for i in {output}/*.gbff.gz ; do "
         r"new=$(echo $i | sed -e s/\.gbff\.gz/\.gbk\.gz/) ; "
@@ -400,24 +434,40 @@ checkpoint refseq_all_genome_download:
     conda:
         "conda_envs/ngd_phylo.yaml"
     params:
-        execdir = exec_dir
+        execdir = exec_dir,
+        taxid = config['target_species_taxid']
     input:
-        "{}/external/taxid{}.target.taxlist".format(
-            exec_dir,
-            config['target_species_taxid']
-        )
+        "external/taxid{params.taxid}.target.taxlist"
     log:
-        "{}/external/refseq_all_download.log".format(exec_dir)
+        "external/refseq_all_download.log"
     output:
-        directory("{}/external/refseq/all/".format(exec_dir))
+        directory("external/refseq/all/")
     shell:
         "ngd -s refseq -r 3 -p 3 -o {output} "
         "-t {input} --flat-output -F genbank "
-        "-m {params.execdir}/external/all.refseq.meta bacteria "
+        "-m external/all.refseq.meta bacteria "
         "for i in {output}/*.gbff.gz ; do "
         r"new=$(echo $i | sed -e s/\.gbff\.gz/\.gbk\.gz/) ; "
         "echo rename $i to $new ; mv $i $new ; "
         "done 2>&1 | tee {log}"
+
+checkpoint refseq_download_landmarks:
+    conda:
+        "conda_envs/ngd_phylo.yaml"
+    params:
+        execdir = exec_dir,
+        accessions = ",".join(config["mash_ref_taxa"])
+    log:
+        "external/refseq_landmark_download.log"
+    output:
+        directory("external/refseq/landmarks/")
+    shell:
+        "ngd -r 3 -p 3 -o {output} --flat-output -F genbank "
+        "-A {params.accessions} bacteria ; "
+        "for i in {output}/*.gbff.gz ; do "
+        r"new=$(echo $i | sed -e s/\.gbff\.gz/\.gbk\.gz/) ; "
+        "echo rename $i to $new ; mv $i $new ; "
+        " done 2>&1 | tee {log}"
 
 
 def aggregate_refseq(wildcards):
@@ -432,10 +482,14 @@ def aggregate_refseq(wildcards):
     checkpoint_outgroup = checkpoints.refseq_outgroup_download.get(
         **wildcards
     ).output[0]
+    checkpoint_landmark = checkpoints.refseq_download_landmarks.get(
+        **wildcards
+    ).output[0]
     assembly_name = glob.glob(checkpoint_set + "*.gbk.gz")
     outgroup_name = glob.glob(checkpoint_outgroup + "*.gbk.gz")
+    landmark_name = glob.glob(checkpoint_landmark + "*.gbk.gz")
 
-    return assembly_name + outgroup_name
+    return assembly_name + outgroup_name + landmark_name
 
 
 rule register_gatk:
@@ -517,7 +571,7 @@ rule post_trim_csv:
     output:
         "trimmed_input/{sample}.csv"
     shell:
-        "scripts/trim_csv.py {input} > {output}"
+        "{params.execdir}/scripts/trim_csv.py {input} > {output}"
 
 
 # FastQC on trimmed_reads
@@ -941,7 +995,7 @@ rule MRCA_make_mpileup:
         "MRCA_ref_mapping/{ref}/{sample}.{step}_MQ30_BAQ.mpileup"
     shell:
         # note that mpileup has moved to bcftools
-        # -d max depth 
+        # -d max depth
         # -q min mapQ
         # -t in samtools 1.7 -> -a output tags
         # -u in samtools 1.7 -> -O v uncompressed VCF output
@@ -1004,15 +1058,44 @@ rule MRCA_inverse_AD_filter:
         "{params.snp_cutoff}) & (ADF[0:1]<=1 || ADR[0:1]<=1)' -o {output}"
 
 # density rule to filter out snps
-rule density_filter:
+rule density_filter_bed:
     threads: 1
+    params:
+        execdir = exec_dir
     input:
         "MRCA_ref_mapping/{ref}/{sample}.{step}_MQ30_BAQ50_DP20_SP60_AD1.vcf"
     output:
-        "MRCA_ref_mapping/{ref}/{sample}.{step}_"
-        "MQ30_BAQ50_DP20_SP60_AD1_DF.vcf"
+        bed = "MRCA_ref_mapping/{ref}/{sample}.{step}_"
+        "MQ30_BAQ50_DP20_SP60_AD1_DF.bed"
     shell:
-        "cp {input} {output}"
+        "{params.execdir}/scripts/make_vcf_density_bed.py {input} > "
+        "{output.bed}"
+
+rule compress_vcf:
+    threads: 1
+    input:
+        "MRCA_ref_mapping/{ref}/{sample}.{step}_"
+        "MQ30_BAQ50_DP20_SP60_AD1.vcf"
+    output:
+        "MRCA_ref_mapping/{ref}/{sample}.{step}_"
+        "MQ30_BAQ50_DP20_SP60_AD1.vcf.gz"
+    shell:
+        "bcftools view -Oz -o {output} {input} ;"
+        "htsfile {output} ;"
+        "bcftools index {output}"
+
+rule density_filter_vcf_with_bed:
+    threads: 1
+    input:
+        bed = "MRCA_ref_mapping/{ref}/{sample}.{step}_MQ30_BAQ50_DP20_SP60_AD1"
+        "_DF.bed",
+        vcf = "MRCA_ref_mapping/{ref}/{sample}.{step}_MQ30_BAQ50_DP20_SP60_AD1"
+        ".vcf.gz",
+    output:
+        vcf = "MRCA_ref_mapping/{ref}/{sample}.{step}_"
+        "MQ30_BAQ50_DP20_SP60_AD1_DF.vcf",
+    shell:
+        "bcftools view {input.vcf} -T ^{input.bed} -Ov -o {output.vcf} "
 
 # sample BED for zero coverage
 rule make_bed_0cov:
@@ -1062,7 +1145,7 @@ rule merge_bed:
         PEPPEbed = "{}/resources/alignment_references/" \
             "{{ref}}.PE_PPE.bed".format(
                 exec_dir
-            )
+            ),
     output:
         "MRCA_ref_mapping/{ref}.{step}.merge.bed"
     shell:
@@ -1071,7 +1154,7 @@ rule merge_bed:
         "grep 'NC_010394\.1' -v | "
         "sort -k 1,1n -k 2,2n | cut -f 1-3 | bedtools merge -i - > {output}"
 
-rule compress_vcf:
+rule compress_DF_vcf:
     threads: 1
     input:
         "MRCA_ref_mapping/{ref}/{sample}.{step}_"
@@ -1114,6 +1197,87 @@ rule filter_hsnps:
         "{params.snp_cutoff})' -Oz -o {output} {input}; "
         "bcftools index {output}"
 
+rule extract_sample_VCF_SNPs:
+    threads: 1
+    params:
+        execdir = exec_dir
+    input:
+        "MRCA_ref_mapping/{ref}/{sample}.{step}_MQ30_BAQ50_DP20_SP60_AD1_DF_"
+        "BedFilter.hvar.vcf.gz"
+    output:
+        "MRCA_ref_mapping/{ref}/{sample}.{step}_MQ30_BAQ50_DP20_SP60_AD1_DF_"
+        "BedFilter_hvar.consensus.fasta"
+    shell:
+        "bcftools consensus -i 'type=\"SNP\"' "
+        "-f {params.execdir}/resources/alignment_references/"
+        "{wildcards.ref}.fasta "
+        " {input} > {output}; "
+
+rule reheader_gubbins:
+    threads: 1
+    params:
+        execdir = exec_dir
+    conda: "conda_envs/phy_plots.yaml"
+    input:
+        "MRCA_ref_mapping/{ref}/{sample}.{step}_MQ30_BAQ50_DP20_SP60_AD1_DF_"
+        "BedFilter_hvar.consensus.fasta"
+    output:
+        "gubbins/{ref}/{sample}.{step}_MQ30_BAQ50_DP20_SP60_AD1_DF_"
+        "BedFilter_hvar.consensus.fasta"
+    shell:
+        "{params.execdir}/scripts/reheader_gubbins.py {input} > {output}"
+
+"""
+10215* 2/1/2021 17:31  cat ./mabscessus/*.fasta > mabs.fasta
+10218* 2/1/2021 17:31  run_gubbins.py --prefix mabs --min_snps 20 --threads 8 mabs.fasta
+10226* 2/1/2021 17:53  cat mabs.filtered_polymorphic_sites.fasta
+10239* 2/1/2021 18:06  ../../analysis/make_bed_from_gubbins.py mabs.recombination_predictions.embl | sort -k 1,1n -k 2,2n > mabs.gubbins.bed
+10243* 2/1/2021 18:10  conda activate mabs
+10260* 2/1/2021 18:17  bcftools view ../MRCA_ref_mapping/mabscessus.RG_SC_RA.merge.vcf.gz -T ^mabs.gubbins.bed -Oz -o mabs.merge.gubbins_filtered.vcf.gz ; bcftools index mabs.merge.gubbins_filtered.vcf.gz -o mabs.merge.gubbins_filtered.vcf.gz.csi
+10262* 2/1/2021 18:56  bcftools view mabs.merge.gubbins_filtered.vcf.gz | ../../scripts/make_SNP_alignment.py > mabs.test.filtered_gubbins.fasta
+10263* 2/1/2021 18:57  conda activate phyplots
+10264* 2/1/2021 18:57  snp-dists -b -c mabs.test.filtered_gubbins.fasta > mabs.test.dist.csv
+10265* 2/1/2021 18:58  snp-dists -b -c mabs.fasta > /dev/null
+10266* 2/1/2021 18:59  ../../scripts/pairSNV_vs_time.py mabs.test.dist.csv /home/nick/Dropbox/MA/sample.csv
+""" # noqa
+# FIX THJE REFERENCE ACCESSION in BED file
+
+# output of the reheader_gubbins rule to be concatenated into {ref}.fasta
+# produced followingoutput, not all is needed
+# {ref}.filtered_polymorphic_sites.fasta
+# {ref}.filtered_polymorphic_sites.phylip
+# {ref}.final_tree.tre
+# {ref}.node_labelled.final_tree.tre
+# {ref}.per_branch_statistics.csv
+# {ref}.recombination_predictions.embl
+# {ref}.recombination_predictions.gff
+# {ref}.summary_of_snp_distribution.vcf
+rule run_gubbins:
+    threads: 8
+    params:
+        execdir = exec_dir,
+        prefix = "gubbins/{ref}"
+    input:
+        "gubbins/{ref}.fasta"
+    output:
+        filtered_fasta = "gubbins/{ref}.filtered_polymorphic_sites.fasta",
+        embl = "gubbins/{ref}.recombination_predictions.embl"
+    shell:
+        "run_gubbins.py --prefix {params.prefix} --min_snps 20 "
+        "--threads {threads} {input}"
+
+rule make_gubbins_bed:
+    threads: 1
+    params:
+        execdir = exec_dir
+    input:
+        "gubbins/{ref}.recombination_predictions.embl"
+    output:
+        "gubbins/{ref}.gubbins.bed"
+    shell:
+        "{params.execdir}/analysis/make_bed_from_gubbins.py {input} > {output}"
+
+
 rule merge_vcf:
     threads: 8
     input:
@@ -1128,6 +1292,10 @@ rule merge_vcf:
     shell:
         "bcftools merge --threads {threads} {input.vcfs} | "
         "bcftools view - -Oz -o {output}"
+
+# filter merged vcf with gubbins bed
+#"bcftools view {input.vcf} -T ^{input.bed} -Oz -o {output.vcf} ;"
+#"bcftools index {output.vcf} -o {output.csi}"
 
 rule make_SNP_alignment:
     threads: 1
