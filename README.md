@@ -39,6 +39,13 @@ ftp://ftp.ccb.jhu.edu/pub/data/kraken2_dbs/
 wget ftp://ftp.ccb.jhu.edu/pub/data/kraken2_dbs/minikraken_8GB_202003.tgz
 ```
 
+# How to run
+```
+snakemake --configfile config.yaml --cores 8 --use-conda --conda-prefix /path/to/.snakemake/conda
+```
+
+Use config.default.yaml as a template for other config files.
+
 # Notes
 200915
 - strange bug causing infinite loop in snakemake downloading refseq genomes. I think this is because of the dynamic() output/input in rules. Checking this out, seeing if the bug happens if I run entire pipeline from scratch.
@@ -134,7 +141,8 @@ wget ftp://ftp.ccb.jhu.edu/pub/data/kraken2_dbs/minikraken_8GB_202003.tgz
 	- [X] compress vcf with bcftools
 
 # TODO 201013
-- [ ] complete density filter
+- [X] complete density filter - 20-11-23
 
 # TODO 201015
 - [X] incorporate https://github.com/phac-nml/mab_mabscessus 211021
+
