@@ -53,14 +53,14 @@ def get_distances(matrix, labels, species):
 def main():
     matrix = [
         l.strip().split(',') for l in
-        open('../analysis/mabscessus.RG_SC_RA.merge.fasta.csv', 'r')
+        open('../results/gubbins/mabs.test.dist.csv', 'r')
     ]
     labels = matrix[0][1:]
     matrix = [row[1:] for row in matrix[1:]]
 
     matrix2 = [
         l.strip().split(',') for l in
-        open('../analysis/mmassiliense.RG_SC_RA.merge.fasta.csv', 'r')
+        open('../results/gubbins/mmas.test.dist.csv', 'r')
     ]
     labels2 = matrix2[0][1:]
     matrix2 = [row[1:] for row in matrix2[1:]]
