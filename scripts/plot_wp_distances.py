@@ -24,7 +24,7 @@ import os
 from plot_phylo_dist_heatmap import make_matrix, read_sample_csv
 
 
-def same_sample(s1, s2):
+def same_pt(s1, s2):
     pt1 = s1.split('-')[0]
     pt2 = s2.split('-')[0]
     if pt1 == pt2:
@@ -32,65 +32,66 @@ def same_sample(s1, s2):
     return False
 
 
-def get_distances(matrix, labels, species):
-    distances = []
-    for i in range(len(matrix)):
-        for j in range(i + 1, len(matrix)):
-            distances.append(
-                (species, 'all', int(matrix[i][j]))
-            )
-            if same_sample(labels[i], labels[j]):
-                distances.append(
-                    (species, 'within_pt', int(matrix[i][j]))
-                )
-            else:
-                distances.append(
-                    (species, 'between_pt', int(matrix[i][j]))
-                )
-    return distances
-
-
 def main():
-    matrix = [
-        l.strip().split(',') for l in
-        open('../results/gubbins/mabs.test.dist.csv', 'r')
-    ]
-    labels = matrix[0][1:]
-    matrix = [row[1:] for row in matrix[1:]]
+    mabs = pd.read_csv("results/SNP_phylo/mabs.csv", index_col=0)
+    mmas = pd.read_csv("results/SNP_phylo/mmas.csv", index_col=0)
 
-    matrix2 = [
-        l.strip().split(',') for l in
-        open('../results/gubbins/mmas.test.dist.csv', 'r')
-    ]
-    labels2 = matrix2[0][1:]
-    matrix2 = [row[1:] for row in matrix2[1:]]
-    print(
-        len(matrix), len(matrix[0]), len(matrix2), len(matrix2[0]),
-        labels, labels2
+    distances = pd.DataFrame(columns=[
+        'subspecies', 'A', 'B', 'type', 'distance']
     )
+    mabs_pts = mabs.index.values
+    for i, x in enumerate(mabs_pts):
+        for y in mabs_pts[i + 1:]:
+            if same_pt(x, y):
+                t = 'within_pt'
+            else:
+                t = 'between_pt'
+            distances = distances.append({
+                'subspecies': 'mabscessus',
+                'A': x,
+                'B': y,
+                'type': t,
+                'distance': mabs[x][y]
+            }, ignore_index=True)
+    mmas_pts = mmas.index.values
+    for i, x in enumerate(mmas_pts):
+        for y in mmas_pts[i + 1:]:
+            if same_pt(x, y):
+                t = 'within_pt'
+            else:
+                t = 'between_pt'
+            distances = distances.append({
+                'subspecies': 'mmassiliense',
+                'A': x,
+                'B': y,
+                'type': t,
+                'distance': mmas[x][y]
+            }, ignore_index=True)
+    mmas_pts = mmas.index.values
 
-    distances = []
-    distances += get_distances(matrix, labels, 'abscessus')
-    distances += get_distances(matrix2, labels2, 'massiliense')
-
+    print(distances)
+    
     sns.set_palette("Reds")
-    df = pd.DataFrame(distances, columns=['subspecies', 'type', 'distance'])
-    sns.boxplot(x='subspecies', y='distance', hue='type', data=df)
+    sns.boxplot(x='subspecies', y='distance', hue='type', data=distances)
     ax = plt.gca()
     ax.set_yscale('log')
 
     print(
-        df.loc[df['subspecies'] == 'massiliense'].loc[df['type'] == 'within_pt']['distance'].median()
-        
+        distances.loc[distances['subspecies'] == 'mabscessus'].loc[distances['type'] == 'within_pt']['distance'].median(),
+        distances.loc[distances['subspecies'] == 'mmassiliense'].loc[distances['type'] == 'within_pt']['distance'].median()
     )
 
-    from matplotlib.ticker import ScalarFormatter
+    from matplotlib.ticker import ScalarFormatter, FormatStrFormatter
     formatter = ScalarFormatter()
     formatter.set_scientific(False)
     ax.yaxis.set_major_formatter(formatter)
     ax.set_yticks([10, 100, 1000, 10000])
+    xticks = ax.get_xticks()
+    print(xticks)
+    plt.xticks(xticks, ['$\it{M. abscesssus}$', '$\it{M. massiliense}$'])
 
-    plt.ylabel('SNV distance')
+    plt.ylabel('SNVs')
+    plt.title('subspecies SNV distance')
     plt.show()
 
 if __name__ == '__main__':
