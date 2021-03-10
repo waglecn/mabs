@@ -30,6 +30,7 @@ def input_files(sample_name, read):
     ])
     if len(reads) == 0:
         exit('no reads found')
+
     return reads
 
 ########################################################################
@@ -41,15 +42,23 @@ def input_files(sample_name, read):
 # TODO - look into symlinks so only the samples with multiple read sets
 # need to be merged, symlink others with expected output names in order to save
 # disk/time
+rule merge_samples_only:
+    input:
+        expand("merged_input/{sample}.{R}.fastq.gz", sample=sample_names, R=["R1", "R2"])
+
 rule merge_samples:
     conda:
         "conda_envs/fastqc.yaml"
+    params:
+        execdir = exec_dir
     input:
         lambda wildcards: input_files(wildcards.sample, wildcards.R)
     output:
-        "merged_input/{sample}.{R}.fastq.gz",
+        temp("merged_input/{sample}.{R}.fastq.gz"),
     shell:
-        "zcat -f {input} | gzip > {output}"
+        # "zcat -f {input} | gzip > {output}"
+        "{params.execdir}/scripts/smart_merge.py {output} {input}"
+
 
 # FastQC on raw reads
 rule pre_trim_QC:
@@ -88,22 +97,9 @@ rule trim_raw_reads:
         "ILLUMINACLIP:{params.adapters}:2:30:10 SLIDINGWINDOW:4:15 MINLEN:"
         "{params.min_len} 2>&1 | tee {log}"
 
-# Produces QC csv
-rule post_trim_csv:
-    threads: 1
-    params:
-        execdir = exec_dir
-    input:
-        "trimmed_input/{sample}.log"
-    output:
-        "trimmed_input/{sample}.csv"
-    shell:
-        "{params.execdir}/scripts/trim_csv.py {input} > {output}"
-
-
 # FastQC on trimmed_reads
 rule post_trim_QC:
-    threads: 4
+    threads: 1
     conda:
         "conda_envs/fastqc.yaml"
     input:
@@ -115,7 +111,7 @@ rule post_trim_QC:
 
 # Kraken2 contamination on the merged raw paired input
 rule kraken2_contamination_paired:
-    threads: 2
+    threads: 1
     conda:
         "conda_envs/kraken2.yaml"
     input:
@@ -132,23 +128,10 @@ rule kraken2_contamination_paired:
         "--gzip-compressed --paired {input.R1} {input.R2} "
         "--report {output.report} --output - 2>&1 | tee {log}"
 
-# QC summary csv
-rule kraken2_summary:
-    threads: 1
-    params:
-        execdir = exec_dir
-    input:
-        "trimmed_kraken/{sample}.trimmed.paired"
-    output:
-        "trimmed_kraken/{sample}.csv"
-    shell:
-        "{params.execdir}/scripts/kraken_summary.py {input} S > {output}"
-
-
 # Detection of post-trim contamination in single reads that will be used for
 # mapping
 rule kraken2_contamination_single:
-    threads: 2
+    threads: 1
     conda:
         "conda_envs/kraken2.yaml"
     input:
@@ -167,7 +150,7 @@ rule kraken2_contamination_single:
 
 # Produces a basic assembly using raw reads for MRCA and species typing
 rule shovill_assembly:
-    threads: 7
+    threads: 4
     conda:
         "conda_envs/shovill.yaml"
     input:
@@ -188,23 +171,9 @@ rule shovill_assembly:
         "--outdir {params.outdir} --tmpdir {params.shovill_tmp} --ram 16 "
         " 2>&1 | tee {log} ; cp {params.outdir}/contigs.fa {output}"
 
-# QC on assembly output
-rule shovill_assembly_summary:
-    threads: 1
-    conda:
-        "conda_envs/biopython.yaml"
-    params:
-        execdir = exec_dir
-    input:
-        "shovill_assembly/{sample}.shovill.contigs.fa"
-    output:
-        "shovill_assembly/{sample}.shovill.csv"
-    shell:
-        "{params.execdir}/scripts/assembly_summary.py {input} > {output}"
-
 # Kraken2 contamination of assembly
 rule kraken2_contamination_assembly:
-    threads: 2
+    threads: 1
     conda:
         "conda_envs/kraken2.yaml"
     input:
@@ -234,22 +203,10 @@ rule assembly_status_erm41:
         "tblastn -subject {input} -query {params.query_file} -outfmt 6 "
         "| head -n 1 | cut -f 2,3,4,6,7,8,9,10 > {output}"
 
-# QC csv for erm41 status
-rule erm41_csv:
-    threads: 1
-    params:
-        execdir = exec_dir
-    input:
-        "erm41_status/{sample}.erm41.status"
-    output:
-        "erm41_status/{sample}.erm41.csv"
-    shell:
-        "{params.execdir}/scripts/erm41_status.py {input} > {output}"
-
 # Everything gets mapped to ATCC19977 to determine basic coverage for QC
 # Consider splitting this up to use threads better
 rule map_to_mabs:
-    threads: 7
+    threads: 4
     input:
         R1 = "trimmed_input/{sample}.R1.fastq.gz",
         R2 = "trimmed_input/{sample}.R2.fastq.gz",
@@ -271,13 +228,13 @@ rule map_to_mabs:
         "{output.paired_temp} ;"
         "bwa mem -t {threads} -M "
         "{params.execdir}/resources/alignment_references/mabscessus "
-        "{input.S1} | samtools view -Sbh - | samtools sort > "
+        "{input.S1} | samtools view -Sbh - | samtools sort -@ {threads} > "
         "{output.single_temp} ;"
         "samtools index {output.paired_temp} ;"
         "samtools index {output.single_temp} ;"
         "samtools merge -f {output.merge_temp} {output.paired_temp} "
         "{output.single_temp} ;"
-        "samtools view -hF 4 {output.merge_temp} | samtools sort > "
+        "samtools view -hF 4 {output.merge_temp} | samtools sort -@ {threads} > "
         "{output.merge_sorted} ;"
         "samtools index {output.merge_sorted} {output.merge_sorted_bai}"
 
@@ -288,21 +245,16 @@ rule depth_map_to_mabs:
     params:
         execdir = exec_dir
     output:
-        csv = "ref_mapping/mabs/{sample}.merged.sorted.csv",
-        depth = "ref_mapping/mabs/{sample}.merged.sorted.depth"
+        depth = "ref_mapping/mabs/{sample}.merged.sorted.depth.gz"
     shell:
         "bedtools genomecov -d -ibam {input} -g "
-        "{params.execdir}/resources/alignment_references/mabcessus.fasta > "
-        "{output.depth} ; "
-        "echo -e \"$(samtools view -c -F 2308 {input}),"
-        "$({params.execdir}/scripts/depth_summary.py {output.depth}),"
-        "$({params.execdir}/scripts/count_softclips.py {input})\" > "
-        "{output.csv}"
+        "{params.execdir}/resources/alignment_references/mabcessus.fasta | gzip > "
+        "{output.depth} "
 
 # This rule puts everything in context of a rough mashtree to determine MRCA
 # for downstream rules - MLST, specific references
 rule mashtree_assemblies:
-    threads: 7
+    threads: 8
     conda:
         "conda_envs/mashtree.yaml"
     input:
@@ -332,6 +284,20 @@ rule mashtree_assemblies:
         "--outmatrix {output.matrix} --tempdir {params.tempdir} "
         "{input} 2>&1 | tee {log}"
 
+rule MRCA_from_tree:
+    threads: 1
+    conda:
+        "conda_envs/ngd_phylo.yaml"
+    input:
+        "mashtree/assembly_mashtree.complete.tree"
+    output:
+        "MRCA/{sample}.csv"
+    params:
+        MRCA = lambda wildcards: MRCA_mapped_ref_input(wildcards.sample)
+    shell:
+        "echo {params.MRCA} > {output}"
+
+
 # This rule determines which samples will use which reference or MLST scheme
 rule MRCA_MLST:
     threads: 1
@@ -351,38 +317,33 @@ rule MRCA_MLST:
         "--threads {threads} {input.assembly} > {output}"
 
 
-
 rule QC_stats_per_sample:
+    conda: "conda_envs/phy_plots.yaml"
     input:
-        trim = "trimmed_input/{sample}.csv",
-        kraken2 = "trimmed_kraken/{sample}.csv",
-        assembly = "shovill_assembly/" \
-            "{sample}.shovill.csv",
-        mlst = "MRCA_MLST/{sample}.mlst.txt",
-        erm41 = "erm41_status/{sample}.erm41.csv",
-        mabs_depth = "ref_mapping/mabs/" \
-            "{sample}.merged.sorted.csv",
-        contigs = "shovill_assembly/" \
-            "{sample}.shovill.contigs.fa",
         tree = "mashtree/assembly_mashtree.complete.tree",
+        trim = "trimmed_input/{sample}.log",
+        kraken2 = "trimmed_kraken/{sample}.trimmed.paired",
+        assembly = "shovill_assembly/{sample}.shovill.contigs.fa",
+        mlst = "MRCA_MLST/{sample}.mlst.txt",
+        erm41 = "erm41_status/{sample}.erm41.status",
+        mabs_bam = "ref_mapping/mabs/{sample}.merged.sorted.bam",
+        mabs_depth = "ref_mapping/mabs/{sample}.merged.sorted.depth.gz",
+        MRCA = "MRCA/{sample}.csv"
     output:
-        "QC_summary/{sample}.QC.csv"
+        "QCsummary/{sample}.QC.csv"
     params:
-        # need lambda function to trigger evaluation of wildcards this node is
-        # in the DAG
-        MRCA = lambda wildcards: MRCA_mapped_ref_input(wildcards.sample)
+        execdir = exec_dir
     shell:
-        "echo -e \"{wildcards.sample},$(cat {input.trim}),"
-        "$(cat {input.kraken2}),"
-        "$(cat {input.assembly}),$(cat {input.mlst} | tr \"\t\" \",\"),"
-        "$(cat {input.erm41}),"
-        "{params.MRCA},$(cat {input.mabs_depth})\" | tee {output}"
+        "{params.execdir}/scripts/make_sample_QC_csv.py {wildcards.sample} "
+        "{input.trim} {input.kraken2} {input.assembly} {input.erm41} "
+        "{input.mabs_bam} {input.mabs_depth} {input.mlst} {input.MRCA} > {output}"
 
 
 rule merge_QC_summary:
+    priority: 10
     threads: 1
     input:
-        expand("QC_summary/{sample}.QC.csv", sample=sample_names)
+        expand("QCsummary/{sample}.QC.csv", sample=sample_names)
     output:
         "QC_summary.csv"
     params:
