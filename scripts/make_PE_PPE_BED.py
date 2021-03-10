@@ -59,5 +59,5 @@ for r in records:
                     label.append('PE_IPR000084')
         if len(label) > 0:
             print('{}\t{}\t{}\t{}'.format(
-                r.id, c.location.start, c.location.end, ','.join(label)
+                r.id, c.location.start - 1, c.location.end, ','.join(label)
             ))
