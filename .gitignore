@@ -7,7 +7,12 @@ __pycache__/
 *.so
 
 notes.md
+?-data/**
 resources/gatk-registered
+resources/GenomeAnalysisTK.jar
+resources/alignment_references/**
+resources/mab_mabscessus/**
+config.*.yaml
 samples.csv*
 samples.*.csv*
 *kraken2*/*
