@@ -18,6 +18,7 @@ that sample
 note: as of 20-11-09 investigating here for issues making the SNP alignment
 """
 import sys
+import vcf
 
 
 def get_samples(header):
@@ -40,37 +41,35 @@ def get_allele(ALT, FORMAT):
 
 
 def main():
-    header = []
-    body = []
-    for line in sys.stdin:
-        if line.startswith('#'):
-            header.append(line.strip())
-        else:
-            body.append(line.strip().split('\t'))
+    # vcf_reader = [r for r in vcf.Reader(open(sys.argv[1], 'rb'))]
+    vcf_reader = vcf.Reader(open(sys.argv[1], 'rb'))
+    for c in vcf_reader.contigs:
+        default_chrom = c
+        break
 
     align = {}
-    samples = get_samples(header)
-    align['ref'] = []
-    for s in samples:
-        align[s] = []
+    for r in vcf_reader:
+        if r.CHROM == default_chrom and r.is_snp:
+            ref_allele = r.REF
+            if 'ref' not in align:
+                align['ref'] = []
+            align['ref'].append(ref_allele)
 
-    for line in body:
-        assert len(line[9:]) == len(samples)
-        # if not is_SNP(line[3], line[4]):
-        #     continue
-        if line[7].startswith('INDEL'):
-            continue
-        align['ref'].append(line[3])
-        for i, sample in enumerate(line[9:]):
-            if sample.startswith('.'):
-                align[samples[i]].append(line[3])
-            else:
-                align[samples[i]].append(get_allele(line[4], sample))
+            for s in r.samples:
+                if s.sample not in align:
+                    align[s.sample] = []
+                
+                if s.gt_bases is not None:
+                    align[s.sample].append(s.gt_bases[0])
+                else:
+                    print('{}\t{}\t{}\t{}\t{}'.format(
+                        s.sample, r.POS, ref_allele, s.gt_bases, s
+                    ), file=sys.stderr)
+                    align[s.sample].append('N')
 
     for s in align:
         print('>{}'.format(s))
         print(''.join(align[s]))
-
 
 
 if __name__ == "__main__":
