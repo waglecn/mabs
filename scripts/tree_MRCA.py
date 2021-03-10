@@ -21,15 +21,17 @@ import ete3
 
 def tree_MRCA(in_tree, sample):
     if not os.path.exists(in_tree):
-        print('no tree')
+        print('tree not found', file=sys.stderr)
         return None
 
     mbtree = ete3.Tree(in_tree)
     leaves = mbtree.get_leaves()
+    # for l in leaves:
+    #     print(l, file=sys.stderr)
 
     # need to assume something about the name
-    sample_node = [l for l in leaves if l.name.startswith(sample)]
-    # print(sample, 'leaves', sample_node)
+    sample_node = [leaf for leaf in leaves if leaf.name.startswith(sample)]
+    # print(sample, 'leaves', sample_node, file=sys.stderr)
     if len(sample_node) == 0:
         return None
 
@@ -44,12 +46,19 @@ def tree_MRCA(in_tree, sample):
         #if 'GCF_000239055.1' in t.name:
         if 'GCF_000497265.2' in t.name:
             targets['mmas_target'] = t
-        if 'GCF_000069185.1' in t.name:
+        if 'GCF_001942505.1' in t.name:
             targets['mabs_target'] = t
+    # print(targets, file=sys.stderr)
 
-    mbol_dist = targets['mbol_target'].get_distance(sample_node[0])
-    mmas_dist = targets['mmas_target'].get_distance(sample_node[0])
-    mabs_dist = targets['mabs_target'].get_distance(sample_node[0])
+    mabs_dist = 1000000.0
+    mmas_dist = 1000000.0
+    mbol_dist = 1000000.0
+    try:
+        mbol_dist = targets['mbol_target'].get_distance(sample_node[0])
+        mmas_dist = targets['mmas_target'].get_distance(sample_node[0])
+        mabs_dist = targets['mabs_target'].get_distance(sample_node[0])
+    except Exception:
+        pass
 
     mindist = min([mbol_dist, mmas_dist, mabs_dist])
     if mindist == mbol_dist:
@@ -59,9 +68,11 @@ def tree_MRCA(in_tree, sample):
     elif mindist == mabs_dist:
         return 'mabscessus'
 
+
 if __name__ == '__main__':
     in_tree = sys.argv[1]  # "../10-mashtree/MBtree"
     sample = sys.argv[2]  # 1-B
+    print((in_tree, sample, os.getcwd()), file=sys.stderr)
     target = tree_MRCA(in_tree, sample)
     # used in shell to determine MLST
     if target == "mbolettii":
