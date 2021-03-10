@@ -54,6 +54,9 @@ Use config.default.yaml as a template for other config files.
 - noticed a bug in running shovill, increased expected memory usage. Shovill version 0.9.0 running from an older miniconda. Removed miniconda, started from scratch, and pinned Shovill 1.1.0 in shovill.yaml
 - after fixing, rerunning seems to work with example data, then works after deleting the mashtree and refseq_download directories. 
 
+210302
+- on vs masking before gubbins vs after see https://github.com/sanger-pathogens/gubbins/issues/275
+
 
 
 # TODO 200902
