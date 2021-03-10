@@ -9,3 +9,7 @@ dependencies:
   - statsmodels
   - fastcluster
   - bioconda::snp-dists
+  - bioconda::snp-sites
+  - xlrd=1.2.0
+  - bioconda::pysam
+  - bioconda::samtools
