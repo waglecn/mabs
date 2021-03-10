@@ -16,35 +16,49 @@ note: as of 20-11-09 this is not working and needs more development
 
 """
 import sys
-from progress import bar
-import numpy as np
+import vcf
 
 MINWINDOW = 12
 
-records = [r.strip().split('\t') for r in open(sys.argv[1], 'r') if not r.startswith('#')]
-chrs = {}
-for v in records:
-    if v[0] not in chrs:
-        chrs[v[0]] = []
-    chrs[v[0]].append(v)
+vcf_reader = vcf.Reader(open(sys.argv[1], 'rb'))
+chrom = []
 
-for key in chrs:
-    length = len(chrs[key])
-    pairs = []
-    pbar = bar.Bar(max=length)
-    current = 0
-    x = current + 1
-    while current < length - 1:
-        if (
-            x < length and
-            int(chrs[key][current][1]) - int(chrs[key][x][1]) < MINWINDOW
-        ):
-            pairs.append((current, x))
-            x += 1
-        else:
-            current += 1
-            x = current + 1
-            pbar.next()
-    pbar.finish()
+snps = []
 
-print(len(pairs))
+current = []
+for record in [r for r in vcf_reader if r.is_snp]:
+    if record.CHROM not in chrom:
+        chrom.append(record.CHROM)
+    if current == []:
+        current.append(record)
+    elif abs(current[-1].POS - record.POS) <= MINWINDOW:
+        current.append(record)
+        # print(
+        #    'added: {} -> {}'.format(current[-2], current[-1]),
+        #    file=sys.stderr
+        # )
+    else:
+        snps.append(current)
+        # print('new window @ {} bp'.format(record.POS, file=sys.stderr)
+        current = []
+        current.append(record)
+snps.append(current)
+
+if len(chrom) > 1:
+    print(
+        'WARNING, more than one CHROM present: {}'.format(chrom),
+        file=sys.stderr
+    )
+
+
+for window in snps:
+    if len(window) > 1:
+        positions = [i.POS for i in window]
+        start = min(positions)
+        end = max(positions)
+        print(
+            "{}\t{}\t{}\t{} SNPS".format(
+                # BED is 0-based, vcf is 1 based, BED is non-inclusive
+                chrom[0], start - 1, end, len(window)
+            )
+        )
