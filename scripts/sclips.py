@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 '''
-This script calculates softclp bases from an input sam/bam file
+This script calculates softclp bases from an input sam/bam file, removes the
+read from the alignment if the fraction of solfclipped bases > 0.20
 
 Example usage: sclips.py STDIN
 
