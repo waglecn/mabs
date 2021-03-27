@@ -113,11 +113,12 @@ def aggregate_refseq(wildcards):
     checkpoint_landmark = checkpoints.refseq_download_landmarks.get(
         **wildcards
     ).output[0]
-    assembly_name = glob.glob(checkpoint_set + "*.gbk.gz")
-    outgroup_name = glob.glob(checkpoint_outgroup + "*.gbk.gz")
-    landmark_name = glob.glob(checkpoint_landmark + "*.gbk.gz")
+    assembly_name = glob.glob(checkpoint_set + "/*.gbk.gz")
+    outgroup_name = glob.glob(checkpoint_outgroup + "/*.gbk.gz")
+    landmark_name = glob.glob(checkpoint_landmark + "/*.gbk.gz")
 
-    return assembly_name + outgroup_name + landmark_name
+    assembly_files = assembly_name + outgroup_name + landmark_name
+    return assembly_files
 
 
 rule register_gatk:

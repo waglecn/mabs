@@ -54,7 +54,7 @@ rule merge_samples:
     input:
         lambda wildcards: input_files(wildcards.sample, wildcards.R)
     output:
-        temp("merged_input/{sample}.{R}.fastq.gz"),
+        "merged_input/{sample}.{R}.fastq.gz",
     shell:
         # "zcat -f {input} | gzip > {output}"
         "{params.execdir}/scripts/smart_merge.py {output} {input}"
@@ -258,7 +258,7 @@ rule mashtree_assemblies:
     conda:
         "conda_envs/mashtree.yaml"
     input:
-        # this is ugly - but there are fewer contraints on input
+        # this is ugly - but there are fewer constraints on input
         # wildcards in input must match wildcards in output, but since
         # this output rule has no wildcards, needed to something else
         # internal = glob.glob("shovill_assembly/*.shovill.contigs.fa"),

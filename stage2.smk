@@ -64,9 +64,10 @@ rule MRCA_ref_softclip_filter:
     input:
         "MRCA_ref_mapping/{ref}/tempRG.merged.{sample}.sorted.bam"
     output:
-        temp("MRCA_ref_mapping/{ref}/tempRGSC.merged.{sample}.sorted.bam")
+        temp("MRCA_ref_mapping/{ref}/tempRGSC.merged.{sample}.sorted.bam"),
     shell:
-        "{params.execdir}/scripts/sclips.py filter {input} > {output}"
+        "{params.execdir}/scripts/sclips.py filter {input} > {output} "
+
 
 rule MRCA_ref_gatk_realignment_intervals:
     threads: 1

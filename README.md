@@ -149,3 +149,28 @@ Use config.default.yaml as a template for other config files.
 # TODO 201015
 - [X] incorporate https://github.com/phac-nml/mab_mabscessus 211021
 
+# 210323
+- merging script
+- copy results_folder1 and results_folder2 into results_merge folder
+- remove the gubbins folder
+- remove the SNP_phyloy folder
+- remove the files in MRCA_ref_folder, but keep the individual reference sub-folders
+- remove the mashtree folder
+
+run snakemake with the following targets, in this order:
+- mashtree/assembly_mashtree.complete.tree
+- stage1
+
+touch ./MRCA_ref_mapping/*/tempRGSC.merged.*.sorted.bam.bai
+touch ./MRCA_ref_mapping/*/*.intervals
+touch ./MRCA_ref_mapping/*/*.RG_SC_RA.bam
+touch ./MRCA_ref_mapping/*/*.RG_SC_RA.mpileup
+touch ./MRCA_ref_mapping/*/*.RG_SC_RA_filter.vcf.gz
+touch ./MRCA_ref_mapping/*/*.RG_SC_RA_filter.failed.vcf.gz
+touch ./MRCA_ref_mapping/*/*.RG_SC_RA_filter.AD_failed.vcf.gz
+touch ./MRCA_ref_mapping/*/*.RG_SC_RA_filter.hvar.vcf.gz
+touch ./MRCA_ref_mapping/*/*.RG_SC_RA.0cov.bed
+touch ./MRCA_ref_mapping/*/*.RG_SC_RA_filter.hvar_DF.bed
+
+- stage2
+- stage3 to generate the merged output (gubbins, SNP phylo, merged beds, etc)

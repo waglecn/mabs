@@ -98,6 +98,9 @@ include: "stage0.smk"
 include: "stage1.smk"
 # variant calling
 include: "stage2.smk"
+# variant counting
+# include: "SNP_counts.smk"
+
 
 rule all:
     input:
@@ -214,7 +217,7 @@ rule stage2:
         ],
         [
             "MRCA_ref_mapping/{ref}/{sample}.RG_SC_RA_filter.hvar_DF.bed".format(
-                ref=MRCA_mapped_ref_input(s), sample=s
+                ref=ref_from_QC(s), sample=s
             ) for s in filt_samples
         ],
 
