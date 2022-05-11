@@ -131,7 +131,10 @@ def assembly_QC(sample, assembly_fasta):
 
 
 def erm41_status(sample, erm41_status):
-    fields = open(erm41_status, 'r').readlines()[0].strip().split('\t')
+    try:
+        fields = open(erm41_status, 'r').readlines()[0].strip().split('\t')
+    except IndexError:
+        fields = ['', '', '0', '', '', '', '', '', '']
 
     if int(fields[2]) < 100:
         fields.append('Y')
