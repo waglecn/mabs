@@ -66,45 +66,49 @@ def main():
     tree.set_outgroup(R)
     tree.ladderize(direction=1)
     labels = [n.name for n in tree.get_leaves()]
-    new_name = None
-    for index, label in enumerate(labels):
-        if label == 'ref':
-            new_name = os.path.split(tree_file)[-1].split('.')[0]
-            new_name = "{}.{}".format(
-                new_name[0].upper(), new_name[1:]
-            )
-            break
-    assert new_name is not None
-    # re-order alignment to match laderized tree
-    from Bio import SeqIO
-    records = [r for r in SeqIO.parse(align_file, 'fasta')]
-    with open('output_file', 'w') as outh:
-        for l in labels:
-            for r in records:
-                if r.id == l:
-                    if l == 'ref':
-                        name = new_name
-                    else:
-                        name = l
-                    outh.write('>{}\n{}\n'.format(
-                        name, r.seq
-                    ))
-    labels[index] = new_name
-    import subprocess
-    result = subprocess.check_output(
-        ['snp-dists', '-b', '-c', 'output_file']
-    )
-    os.remove('output_file')
-    csv_file = os.path.split(align_file)[-1] + '.csv'
-    print(csv_file)
-    with open(csv_file, 'w') as outh:
-        outh.write(result.decode('utf-8'))
+    # new_name = None
+    # for index, label in enumerate(labels):
+    #     if label == 'ref':
+    #         new_name = os.path.split(tree_file)[-1].split('.')[0]
+    #         new_name = "{}.{}".format(
+    #             new_name[0].upper(), new_name[1:]
+    #         )
+    #         break
+    # assert new_name is not None
+    # # re-order alignment to match laderized tree
+    # from Bio import SeqIO
+    # records = [r for r in SeqIO.parse(align_file, 'fasta')]
+    # with open('output_file', 'w') as outh:
+    #     for l in labels:
+    #         for r in records:
+    #             if r.id == l:
+    #                 if l == 'ref':
+    #                     name = new_name
+    #                 else:
+    #                     name = l
+    #                 outh.write('>{}\n{}\n'.format(
+    #                     name, r.seq
+    #                 ))
+    # labels[index] = new_name
+    # import subprocess
+    # result = subprocess.check_output(
+    #     ['snp-dists', '-b', '-c', 'output_file']
+    # )
+    # os.remove('output_file')
+    # csv_file = os.path.split(align_file)[-1] + '.csv'
+    # print(csv_file)
+    # with open(csv_file, 'w') as outh:
+    #     outh.write(result.decode('utf-8'))
 
-    matrix = pd.read_csv(csv_file, index_col=0)
+    matrix = pd.read_csv(sys.argv[3], index_col=0)
     print(matrix)
+    matrix = matrix[labels]
+    matrix = matrix.reindex(labels)
+    print(matrix)
+    
     ax = sns.heatmap(
         matrix, xticklabels=True, yticklabels=True,
-        linewidths=0.05,
+        linewidths=0.05, 
     )
     plt.show()
 
