@@ -13,3 +13,4 @@ dependencies:
   - pysam =0.15.0
   - bioconda::ete3
   - bioconda::pyvcf=0.6.8
+  - bioconda::bedtools=2.30.0
