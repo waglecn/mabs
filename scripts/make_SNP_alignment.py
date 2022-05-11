@@ -20,6 +20,13 @@ note: as of 20-11-09 investigating here for issues making the SNP alignment
 import sys
 import vcf
 
+try:
+    from progress.bar import Bar
+    from progress.spinner import Spinner
+    from progress.counter import Counter
+except ModuleNotFoundError:
+    pass
+
 
 def get_samples(header):
     return header[-1].split('\t')[9:]
@@ -47,18 +54,28 @@ def main():
         default_chrom = c
         break
 
-    align = {}
+    align = {s: [] for s in (vcf_reader.samples + ['ref'])}
+    try:
+        pbar = Counter(suffix='%(index)d%%')
+    except Exception:
+        pass
+
     for r in vcf_reader:
+        try:
+            pbar.next()
+        except Exception:
+            pass
+
+        
         if r.CHROM == default_chrom and r.is_snp:
             ref_allele = r.REF
-            if 'ref' not in align:
-                align['ref'] = []
+            # if 'ref' not in align:
+            #     align['ref'] = []
             align['ref'].append(ref_allele)
 
             for s in r.samples:
-                if s.sample not in align:
-                    align[s.sample] = []
-                
+                # if s.sample not in align:
+                #     align[s.sample] = []
                 if s.gt_bases is not None:
                     align[s.sample].append(s.gt_bases[0])
                 else:
@@ -66,7 +83,10 @@ def main():
                         s.sample, r.POS, ref_allele, s.gt_bases, s
                     ), file=sys.stderr)
                     align[s.sample].append('N')
-
+    try:
+        pbar.finish()
+    except Exception:
+        pass
     for s in align:
         print('>{}'.format(s))
         print(''.join(align[s]))
