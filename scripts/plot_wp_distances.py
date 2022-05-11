@@ -69,7 +69,16 @@ def main():
             }, ignore_index=True)
     mmas_pts = mmas.index.values
 
-    print(distances)
+    for i in ['mabscessus', 'mmassiliense']:
+        for j in ['between_pt', 'within_pt']:
+            print(i, j)    
+            print(
+                distances[
+                    (distances['subspecies'] == i) &
+                    (distances['type'] == j)
+                ]['distance'].quantile([0.25, 0.5, 0.75])
+            )
+    
     
     sns.set_palette("Reds")
     sns.boxplot(x='subspecies', y='distance', hue='type', data=distances)
