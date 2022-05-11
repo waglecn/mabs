@@ -70,8 +70,9 @@ data = data[data['patient'] != '17']
 # g = sns.FacetGrid(data, col="patient", hue='patient')
 #g.map(sns.lmplot, x="days", y="dist")
 g = sns.lmplot(data=data, col='patient', col_wrap=4, x="days", y="dist")
-# g.set(ylim=(None, 25))
-plt.ylabel('SNVs')
-plt.xlabel('time between samples (days)')
+g.set(ylim=(0, 100))
+g.set(xlim=(0, 2000))
+plt.ylabel('Pairwise SNVs')
+plt.xlabel('infection days')
 plt.show()
 
