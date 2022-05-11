@@ -13,12 +13,14 @@ def input_files(sample_name, read):
     if read == 'R1':
         fastqs = [
             reads for reads in sample_dict[sample_name] if
-            reads.split('_')[-1].endswith('1.fastq.gz')
+            # reads.split('_')[-1].endswith('R1_001.fastq.gz')
+            '_R1' in reads
         ]
     elif read == 'R2':
         fastqs = [
             reads for reads in sample_dict[sample_name] if
-            reads.split('_')[-1].endswith('2.fastq.gz')
+            # reads.split('_')[-1].endswith('R2_001.fastq.gz')
+            '_R2' in reads
         ]
     else:
         exit('Uh oh.')
@@ -92,7 +94,7 @@ rule trim_raw_reads:
     log:
         "trimmed_input/{sample}.log"
     shell:
-        "trimmomatic PE -threads {threads} {input.R1} {input.R2} "
+        "trimmomatic PE -phred33 -threads {threads} {input.R1} {input.R2} "
         "{output.tR1} {output.tS1} {output.tR2} {output.tS2} "
         "ILLUMINACLIP:{params.adapters}:2:30:10 SLIDINGWINDOW:4:15 MINLEN:"
         "{params.min_len} 2>&1 | tee {log}"

@@ -86,7 +86,7 @@ rule MRCA_ref_gatk_realignment_intervals:
     log:
         "MRCA_ref_mapping/{ref}/{sample}.gatk3_intervals.log"
     shell:
-        "gatk3 -T RealignerTargetCreator -R "
+        "gatk3 -nt 1 -T RealignerTargetCreator -R "
         "{params.execdir}/resources/alignment_references/"
         "{wildcards.ref}.fasta "
         "-I {input.bam} -o {output} 2>&1 | tee {log}"
@@ -106,7 +106,7 @@ rule MRCA_ref_gatk_realignment:
     log:
         "MRCA_ref_mapping/{ref}/{sample}.gatk_realign.log"
     shell:
-        "gatk3 -rf OverclippedRead "
+        "gatk3 -nt 1 -rf OverclippedRead "
         # "--filter_is_too_short_value 100 -minRead 100 "
         # "--do_not_require_softclips_both_ends -rf ReadLength -maxRead 500 "
         "-T IndelRealigner "

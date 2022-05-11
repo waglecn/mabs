@@ -6,7 +6,6 @@ import glob
 if len(config) == 0:
     exit('no configfile specified: use --configfile [file]')
 
-
 # TODO -- from
 """
 from https://snakemake.readthedocs.io/en/v5.22.1/snakefiles/configuration.html#validation
@@ -50,7 +49,9 @@ for name in stage2_excluded_samples:
             'to_exclude {} not found in sample_sheet'.format(name),
             file=sys.stderr
         )
-
+print('Including {} samples from original {} samples'.format(
+    len(filt_samples), len(sample_names)
+))
 
 def MRCA_mapped_ref_input(sample_name):
     '''
@@ -346,8 +347,11 @@ rule merge_0cov_bed:
     output:
         "MRCA_ref_mapping/{ref}.RG_SC_RA.merge.0cov.bed"
     shell:
-        "cat {input} | "
-        "grep 'NC_010394\.1' -v | sort -k 1,1n -k 2,2n | uniq | "
+        # the grep command will fail on the input of an empty bed file
+        # something to do with bash strict mode?
+        "echo '' | "
+        "cat - {input} | "
+        "grep 'NC_010394' -v | sort -k 1,1n -k 2,2n | uniq | "
         "bedtools merge -i - > {output}"
 
 rule merge_DF_bed:
@@ -362,9 +366,9 @@ rule merge_DF_bed:
     output:
         "MRCA_ref_mapping/{ref}.RG_SC_RA.merge.DF.bed"
     shell:
-        "cat {input} | "
-        r"grep 'NC_010394\.1' -v | sort -k 1,1n -k 2,2n | uniq | "
-        "bedtools merge -i -> {output}"
+        "echo '' | cat - {input} | "
+        "grep 'NC_010394' -v | sort -k 1,1n -k 2,2n | uniq | "
+        "bedtools merge -i - > {output}"
 
 rule merge_bed:
     threads: 1
@@ -376,7 +380,8 @@ rule merge_bed:
     output:
         "MRCA_ref_mapping/{ref}.RG_SC_RA.merge.bed"
     shell:
-        "cat {input} | "
+        "echo '' | "
+        "cat - {input} | "
         r"grep 'NC_010394\.1' -v | sort -k 1,1n -k 2,2n | cut -f 1-3 | "
         "bedtools merge -i - > {output}"
 
@@ -448,7 +453,7 @@ rule run_gubbins:
     output:
         # filtered_fasta = "gubbins/{ref}.concatenated."
         # "filtered_polymorphic_sites.fasta",
-        # embl = "gubbins/{ref}.concatenated.recombination_predictions.embl",
+        embl = "gubbins/{ref}.concatenated.recombination_predictions.embl",
         sentinel = "gubbins/{ref}.gubbins.done"
     shell:
         "run_gubbins.py --prefix {params.prefix} --min_snps 20 "
@@ -463,13 +468,14 @@ rule make_gubbins_bed:
         execdir = exec_dir
     input:
         # sentinel implies this exists
-        # embl = "gubbins/{ref}.concatenated.recombination_predictions.embl",
+        embl = "gubbins/{ref}.concatenated.recombination_predictions.embl",
         sentinel = "gubbins/{ref}.gubbins.done"
     output:
         "gubbins/{ref}.gubbins.bed"
     shell:
-        "{params.execdir}/scripts/make_bed_from_gubbins.py {input.sentinel} > "
-        "{output}"
+        "{params.execdir}/scripts/make_bed_from_gubbins.py {input.embl} "
+        "{params.execdir}/resources/alignment_references/{wildcards.ref}.fasta "
+        "{input.sentinel} > {output}"
 
 rule merge_vcf:
     threads: 8
@@ -484,7 +490,7 @@ rule merge_vcf:
                 ref=ref_from_QC(s), s=s
             ) for s in filt_samples if ref_from_QC(s) == wildcards.ref
         ],
-        
+
     output:
         "MRCA_ref_mapping/{ref}.merge.vcf.gz"
     shell:
