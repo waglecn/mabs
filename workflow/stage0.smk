@@ -3,12 +3,12 @@
 #########################################################################
 checkpoint refseq_outgroup_download:
     conda:
-        'conda_envs/ngd_phylo.yaml'
+        'envs/ngd_phylo.yaml'
     params:
         outgroup = config['outgroup_assembly'],
         execdir = exec_dir
     output:
-        directory("external/refseq/outgroup/")
+        directory("workflow/resources/external/refseq/outgroup/")
     log:
         "external/refseq_outgroup_download.log"
     shell:
@@ -24,7 +24,7 @@ rule download_refseq_taxlist:
         taxid = config['target_species_taxid'],
         execdir = exec_dir
     output:
-        "external/taxid{taxid}.target.taxlist".format(
+        "workflow/resources/external/taxid{taxid}.target.taxlist".format(
             taxid=config['target_species_taxid']
         )
     shell:
@@ -33,18 +33,18 @@ rule download_refseq_taxlist:
 
 checkpoint refseq_complete_genome_download:
     conda:
-        'conda_envs/ngd_phylo.yaml'
+        'envs/ngd_phylo.yaml'
     params:
         taxid = config['target_species_taxid'],
         execdir = exec_dir
     input:
-        "external/taxid{taxid}.target.taxlist".format(
+        "workflow/resources/external/taxid{taxid}.target.taxlist".format(
             taxid=config['target_species_taxid']
         )
     log:
-        "external/refseq_complete_download.log"
+        "workflow/resources/external/refseq_complete_download.log"
     output:
-        directory("external/refseq/complete/"),
+        directory("workflow/resources/external/refseq/complete/"),
         # a non-dynamic output may not exist with dynamic output
     shell:
         "ngd -v -s refseq -r 3 -p 3 -o {output} "
@@ -58,7 +58,7 @@ checkpoint refseq_complete_genome_download:
 
 checkpoint refseq_all_genome_download:
     conda:
-        "conda_envs/ngd_phylo.yaml"
+        "envs/ngd_phylo.yaml"
     params:
         execdir = exec_dir,
         taxid = config['target_species_taxid']
@@ -81,7 +81,7 @@ checkpoint refseq_all_genome_download:
 
 checkpoint refseq_download_landmarks:
     conda:
-        "conda_envs/ngd_phylo.yaml"
+        "envs/ngd_phylo.yaml"
     params:
         execdir = exec_dir,
         accessions = ",".join(config["mash_ref_taxa"])
@@ -122,10 +122,10 @@ def aggregate_refseq(wildcards):
 
 
 rule register_gatk:
-    conda: "conda_envs/gatk3.yaml"
+    conda: "envs/gatk3.yaml"
     output: os.path.join(exec_dir, 'resources/gatk-registered')
     params:
-        gatk_jar = "{execdir}/resources/{gatk_jar}".format(
+        gatk_jar = "resources/{gatk_jar}".format(
             gatk_jar=config['gatk3_jar'],
             execdir=exec_dir
         )

@@ -3,10 +3,10 @@ target_species_taxid: 670516
 # copy into resources directory - provide your own, due to license
 gatk3_jar: "GenomeAnalysisTK.jar"
 # base location of internal sample read data
-data_dir: "0-data"
+data_dir: "/media/nick/8TB/SGL_MA/"
 # Replace this with the sample sheet for your own samples, see provided example
 # for the format
-sample_sheet: "samples.internal.csv"
+sample_sheet: "samples.test.yaml"
 # copied from a local installation of Trimmomatic - don't know where the
 # adapter files live in conda-land
 adapters_fasta: "resources/TruSeq3-PE.fa"
@@ -27,7 +27,4 @@ results_dir: "results"
 # default mash taxa bolettii, mmas, abscessus
 mash_ref_taxa: ['GCF_003609715.1', 'GCF_000497265.2', 'GCF_001942505.1']
 # samples to exclude in stage 2
-exclude_samples: [
-    '29-3L', '29-3K', '29-2Z', '29-2L', '29-G', '27-D', '25-U', '25-J', '20-E',
-    '19-A', '19-B', '17-F_2', '17-E', '17-B_combined', '16-A', '14-U', '14-F',
-]
+exclude_samples: []

@@ -6,6 +6,8 @@ __pycache__/
 # C extensions
 *.so
 
+samples.yaml
+results/*
 notes.md
 *deletelist
 ?-data/**
