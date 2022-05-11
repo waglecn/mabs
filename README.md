@@ -153,7 +153,7 @@ Use config.default.yaml as a template for other config files.
 - merging script
 - copy results_folder1 and results_folder2 into results_merge folder
 - remove the gubbins folder
-- remove the SNP_phyloy folder
+- remove the SNP_phylo folder
 - remove the files in MRCA_ref_folder, but keep the individual reference sub-folders
 - remove the mashtree folder
 
