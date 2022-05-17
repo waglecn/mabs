@@ -27,9 +27,13 @@ include: "common.smk"
 
 samples = get_samples()
 sample_names = samples.keys()
+long_sample_names = [n for n in sample_names if len(samples[n]['MINION']) > 0]
+both_samples = [n for n in sample_names if n in sample_names and n in long_sample_names]
 # sample_names = list(sample_names)[:20]
 # print(sample_names, file=sys.stderr)
+import pprint
 
+pprint.pprint(samples)
 filt_samples = list(sample_names)
 filtered_samples = config['exclude_samples']
 for name in filtered_samples:
@@ -40,7 +44,7 @@ for name in filtered_samples:
             'tried to_exclude {}, not found in sample_sheet'.format(name),
             file=sys.stderr
         )
-print('Including {} samples from original {} samples'.format(
+print('Including {} isolates (from original {} isolates)'.format(
     len(filt_samples), len(sample_names)
 ))
 
@@ -70,7 +74,6 @@ rule stage1:
         "QC_summary.csv"
 
 rule stage1_all_outputs:
-    # short reads
     input:
         # pre-trim QC
         expand(
@@ -79,51 +82,75 @@ rule stage1_all_outputs:
             sample=sample_names,
             R=["R1", "R2"],
         ),
-#         # trimmed input
-#         expand(
-#             "trimmed_input/{sample}.{read}.fastq.gz",
-#             sample=sample_names,
-#             read=["R1", "R2", "S1", "S2"],
-#         ),
-#         # post-trim QC
-#         expand(
-#             "post_trim_QC/{sample}.{read}_fastqc.html",
-#             sample=sample_names,
-#             read=["R1", "R2", "S1", "S2"],
-#         ),
-#         # Kraken contamination, paired and single
-#         expand(
-#             "trimmed_kraken/{sample}.trimmed.paired",
-#             sample=sample_names,
-#         ),
-#         expand(
-#             "trimmed_kraken/{sample}.trimmed.single",
-#             sample=sample_names,
-#         ),
-#         # assembly with shovill
-#         expand(
-#             "shovill_assembly/{sample}.shovill.contigs.fa",
-#             sample=sample_names,
-#         ),
-#         # kraken2 the assembly
-#         expand(
-#             "assembly_kraken/{sample}.assembly",
-#             sample=sample_names,
-#         ),
-#         # MRCA ref per sample
-#         expand(
-#             "MRCA/{sample}.csv",
-#             sample=sample_names,
-#         ),
-#         # determine the basic Erm(41) status with TBLASTN
-#         expand(
-#             "erm41_status/{sample}.erm41.status",
-#             sample=sample_names,
-#         ),
-#         "mashtree/assembly_mashtree.complete.tree",
-#         "mashtree/assembly_mashtree.complete.matrix",
-#         # type assemblies using MRCAs from mashtree
-#         "QC_summary.csv"
+        # trimmed input
+        expand(
+            "{res}/{s}/input/{read}.trim.fastq.gz",
+            res=res,
+            s=sample_names,
+            read=["R1", "R2", "S1", "S2"],
+        ),
+        # post-trim QC
+        expand(
+            "{res}/{s}/input/{read}.trim_fastqc.html",
+            res=res,
+            s=sample_names,
+            read=["R1", "R2", "S1", "S2"],
+        ),
+        # Kraken contamination, paired and single
+        expand(
+            "{res}/{sample}/input/kraken.trimmed.paired",
+            res=res,
+            sample=sample_names,
+        ),
+        expand(
+            "{res}/{sample}/input/kraken.trimmed.single",
+            res=res,
+            sample=sample_names,
+        ),
+        # assembly with shovill
+        expand(
+            "{res}/{sample}/shovill_assembly/{sample}.shovill.contigs.fa",
+            res=res,
+            sample=sample_names,
+        ),
+        expand(
+            "{res}/{sample}/dflye/contigs.fa",
+            res=res,
+            sample=long_sample_names,
+        ),
+        expand(
+            "{res}/{sample}/dflye_short_polish/contigs.fa",
+            res=res,
+            sample=both_samples,
+        ),
+        # kraken2 the assembly
+        expand(
+            "{res}/{sample}/shovill_assembly/kraken.assembly",
+            res=res,
+            sample=sample_names,
+        ),
+        # MRCA ref per sample
+        expand(
+            "{res}/{sample}/{sample}.MRCA.csv",
+            res=res,
+            sample=sample_names,
+        ),
+        # MLST ref per sample
+        expand(
+            "{res}/{sample}/{sample}.MLST.csv",
+            res=res,
+            sample=sample_names,
+        ),
+        # determine the basic Erm(41) status with TBLASTN
+        expand(
+            "{res}/{sample}/{sample}.erm41.status",
+            res=res,
+            sample=sample_names,
+        ),
+        f"{res}/mashtree/assembly_mashtree.complete.tree",
+        f"{res}/mashtree/assembly_mashtree.complete.matrix",
+        # type assemblies using MRCAs from mashtree
+        f"{res}/QC_summary.csv"
 
 # rule stage2:
 #     input:

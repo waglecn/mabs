@@ -20,12 +20,12 @@ output = None
 for inf in infiles:
     try:
         df = pd.read_csv(inf)
-    except Exception:
-        print(inf)
-    if output is None:
-        output = df
-    else:
-        output = output.append(df, ignore_index=True)
+        if output is None:
+            output = df
+        else:
+            output = output.append(df, ignore_index=True)
+    except Exception as e:
+        print(inf, e)
 
 output.index = output['sample']
 output.to_csv(outfile)

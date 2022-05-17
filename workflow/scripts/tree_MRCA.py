@@ -70,12 +70,14 @@ def tree_MRCA(in_tree, sample):
 
 
 if __name__ == '__main__':
-    in_tree = sys.argv[1]  # "../10-mashtree/MBtree"
-    sample = sys.argv[2]  # 1-B
-    print((in_tree, sample, os.getcwd()), file=sys.stderr)
+    mode = sys.argv[1]  # ref or mlst
+    in_tree = sys.argv[2]  # "../10-mashtree/MBtree"
+    sample = sys.argv[3]  # 1-B
+    # print((mode, in_tree, sample, os.getcwd()), file=sys.stderr)
     target = tree_MRCA(in_tree, sample)
     # used in shell to determine MLST
-    if target == "mbolettii":
-        print('mmassiliense')
+    # for the purposes of MLST, we will use the mmas scheme
+    if mode == 'mlst' and target == "mbolettii":
+            print('mmassiliense')
     else:
         print(target)

@@ -11,10 +11,10 @@ results/*
 notes.md
 *deletelist
 ?-data/**
-resources/gatk-registered
-resources/GenomeAnalysisTK.jar
-resources/alignment_references/**
-resources/mab_mabscessus/**
+workflow/resources/gatk-registered
+workflow/resources/GenomeAnalysisTK.jar
+wokrflow/resources/alignment_references/**
+workflow/resources/mab_mabscessus/**
 config.*.yaml
 samples.csv*
 samples.*.csv*

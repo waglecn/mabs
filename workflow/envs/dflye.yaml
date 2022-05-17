@@ -1,0 +1,7 @@
+channels:
+    - conda-forge
+    - bioconda
+dependencies:
+    - bioconda::dragonflye=1.0.12
+variables:
+  JAVA_OPTS: "-Xms4g -Xmx32g"

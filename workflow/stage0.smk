@@ -10,7 +10,7 @@ checkpoint refseq_outgroup_download:
     output:
         directory("workflow/resources/external/refseq/outgroup/")
     log:
-        "external/refseq_outgroup_download.log"
+        "workflow/resources/external/refseq_outgroup_download.log"
     shell:
         "ngd -s refseq -r3 --flat-output -A {params.outgroup} -F genbank "
         "-o {output} bacteria ; "
@@ -20,6 +20,8 @@ checkpoint refseq_outgroup_download:
         "done 2>&1 | tee {log}"
 
 rule download_refseq_taxlist:
+    conda:
+        "envs/ngd_phylo.yaml"
     params:
         taxid = config['target_species_taxid'],
         execdir = exec_dir
@@ -28,7 +30,7 @@ rule download_refseq_taxlist:
             taxid=config['target_species_taxid']
         )
     shell:
-        "python {params.execdir}/scripts/gimme-taxa.py -j "
+        "python workflow/scripts/gimme-taxa.py -j "
         "{params.taxid} > {output}"
 
 checkpoint refseq_complete_genome_download:
@@ -49,7 +51,7 @@ checkpoint refseq_complete_genome_download:
     shell:
         "ngd -v -s refseq -r 3 -p 3 -o {output} "
         "-t {input} --flat-output -F genbank "
-        "-m external/complete.refseq.meta "
+        "-m workflow/resources/external/complete.refseq.meta "
         "-l complete bacteria ; "
         "for i in {output}/*.gbff.gz ; do "
         r"new=$(echo $i | sed -e s/\.gbff\.gz/\.gbk\.gz/) ; "
@@ -63,17 +65,17 @@ checkpoint refseq_all_genome_download:
         execdir = exec_dir,
         taxid = config['target_species_taxid']
     input:
-        "external/taxid{taxid}.target.taxlist".format(
+        "workflow/resources/external/taxid{taxid}.target.taxlist".format(
             taxid=config['target_species_taxid']
         )
     log:
-        "external/refseq_all_download.log"
+        "workflow/resources/external/refseq_all_download.log"
     output:
-        directory("external/refseq/all/")
+        directory("workflow/resources/external/refseq/all/")
     shell:
         "ngd -s refseq -r 3 -p 3 -o {output} "
         "-t {input} --flat-output -F genbank "
-        "-m external/all.refseq.meta bacteria "
+        "-m workflow/resources/external/all.refseq.meta bacteria "
         "for i in {output}/*.gbff.gz ; do "
         r"new=$(echo $i | sed -e s/\.gbff\.gz/\.gbk\.gz/) ; "
         "echo rename $i to $new ; mv $i $new ; "
@@ -84,11 +86,11 @@ checkpoint refseq_download_landmarks:
         "envs/ngd_phylo.yaml"
     params:
         execdir = exec_dir,
-        accessions = ",".join(config["mash_ref_taxa"])
+        accessions = ",".join(config["mash_ref_taxa"].values())
     log:
-        "external/refseq_landmark_download.log"
+        "workflow/resources/external/refseq_landmark_download.log"
     output:
-        directory("external/refseq/landmarks/")
+        directory("workflow/resources/external/refseq/landmarks/")
     shell:
         "ngd -r 3 -p 3 -o {output} --flat-output -F genbank "
         "-A {params.accessions} bacteria ; "
@@ -123,12 +125,37 @@ def aggregate_refseq(wildcards):
 
 rule register_gatk:
     conda: "envs/gatk3.yaml"
-    output: os.path.join(exec_dir, 'resources/gatk-registered')
+    output: os.path.join(exec_dir, 'workflow/resources/gatk-registered')
     params:
-        gatk_jar = "resources/{gatk_jar}".format(
+        gatk_jar = "workflow/resources/{gatk_jar}".format(
             gatk_jar=config['gatk3_jar'],
             execdir=exec_dir
         )
     shell:
         "echo {output} ; gatk3-register {params.gatk_jar} ; touch {output}"
+
+rule get_alignment_references:
+    conda:
+        "envs/ngd_phylo.yaml"
+    threads: 1
+    params:
+        acc = lambda wildcards: config['mash_ref_taxa'][wildcards.ref]
+    output:
+        "workflow/resources/alignment_references/{ref,\w+}"
+    shell:
+        "ngd -s refseq -r3 --flat-output -A {params.acc} -F fasta "
+        "-o workflow/resources/alignment_references bacteria ; "
+        "gunzip -c workflow/resources/alignment_references/{params.acc}*.gz > "
+        "workflow/resources/alignment_references/{wildcards.ref} "
+
+rule make_mapping_index:
+    conda:
+        "envs/bwa.yaml"
+    threads: 1
+    input:
+        "workflow/resources/alignment_references/{ref,\w+}"
+    output:
+        "workflow/resources/alignment_references/{ref\w+}.amb"
+    shell:
+        "bwa-mem2 index {input}"
 
