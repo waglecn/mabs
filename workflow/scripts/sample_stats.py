@@ -88,7 +88,8 @@ ERM41
 
 
 def short_raw(sample, stats):
-    base = Path(f'./results/{sample}')
+    results_dir = stats['results_dir']
+    base = Path(f'{results_dir}/{sample}')
     from Bio import SeqIO
     stats['raw_QC_num_pairs'] = 'N/A'
     stats['raw_QC_reads1'] = 'N/A'
@@ -147,6 +148,7 @@ def short_raw(sample, stats):
 
 
 def post_trim_QC(sample, stats):
+    results_dir = stats['results_dir']
     stats['post_trim_QC_num_pairs'] = 'N/A'
     stats['post_trim_QC_R1'] = 'N/A'
     stats['post_trim_QC_R2'] = 'N/A'
@@ -162,7 +164,7 @@ def post_trim_QC(sample, stats):
     stats['post_trim_QC_basesR2'] = 'N/A'
     stats['post_trim_QC_basesS1'] = 'N/A'
     stats['post_trim_QC_basesS2'] = 'N/A'
-    base = Path(f'./results/{sample}')
+    base = Path(f'./{results_dir}/{sample}')
 
     for i in ['R1', 'R2', 'S1', 'S2']:
         inf = base / 'input' / f'{i}.trim.fastq.gz'
@@ -193,9 +195,9 @@ def post_trim_QC(sample, stats):
 
 
 def kraken(sample, stats):
+    results_dir = stats['results_dir']
 
-
-    base = Path(f'./results/{sample}')
+    base = Path(f'./{results_dir}/{sample}')
     for i in ['raw.paired', 'trimmed.paired', 'trimmed.single']:
         stats[f'kraken_{i}_s1_frac'] = 'N/A'
         stats[f'kraken_{i}_s1_num'] = 'N/A'
@@ -235,12 +237,13 @@ def kraken(sample, stats):
 
 
 def short_assembly(sample, stats):
+    results_dir = stats['results_dir']
     stats['short_assembly_num_contigs'] = 'N/A'
     stats['short_assembly_length'] = 'N/A'
     stats['short_assembly_N50'] = 'N/A'
     stats['short_assembly_L50'] = 'N/A'
 
-    base = Path(f'./results/{sample}')
+    base = Path(f'./{results_dir}/{sample}')
     inf = base / 'shovill_assembly' / 'contigs.fa'
     try:
         records = [r for r in SeqIO.parse(open(inf, 'r'), format='fasta')]
@@ -266,12 +269,13 @@ def short_assembly(sample, stats):
 
 
 def long_assembly(sample, stats):
+    results_dir = stats['results_dir']
     stats['long_assembly_num_contigs'] = 'N/A'
     stats['long_assembly_length'] = 'N/A'
     stats['long_assembly_N50'] = 'N/A'
     stats['long_assembly_L50'] = 'N/A'
 
-    base = Path(f'./results/{sample}')
+    base = Path(f'./{results_dir}/{sample}')
     inf = base / 'dflye' / 'contigs.fa'
     try:
         records = [r for r in SeqIO.parse(open(inf, 'r'), format='fasta')]
@@ -296,12 +300,13 @@ def long_assembly(sample, stats):
     return stats
 
 def long_polished_assembly(sample, stats):
+    results_dir = stats['results_dir']
     stats['long_polish_assembly_num_contigs'] = 'N/A'
     stats['long_polish_assembly_length'] = 'N/A'
     stats['long_polish_assembly_N50'] = 'N/A'
     stats['long_polish_assembly_L50'] = 'N/A'
 
-    base = Path(f'./results/{sample}')
+    base = Path(f'./{results_dir}/{sample}')
     inf = base / 'dflye_short_polish' / 'contigs.fa'
     try:
         records = [r for r in SeqIO.parse(open(inf, 'r'), format='fasta')]
@@ -327,6 +332,7 @@ def long_polished_assembly(sample, stats):
 
 
 def mapping(sample, stats):
+    results_dir = stats['results_dir']
     stats['map_mapped_reads'] = 'N/A'
     stats['map_ref_bases'] = 'N/A'
     stats['map_bases_0cov'] = 'N/A'
@@ -342,7 +348,7 @@ def mapping(sample, stats):
 
     import pysam
 
-    base = Path(f'./results/{sample}')
+    base = Path(f'./{results_dir}/{sample}')
 
     inf = base / 'ref_mapping' / 'mabs' / 'merged.sorted.bam'
     try:
@@ -385,9 +391,10 @@ def mapping(sample, stats):
 
 
 def MRCA(sample, stats):
+    results_dir = stats['results_dir']
     stats['MRCA'] = 'N/A'
 
-    base = Path(f'./results/{sample}')
+    base = Path(f'./{results_dir}/{sample}')
 
     inf = base / f'{sample}.MRCA.csv'
     try:
@@ -401,6 +408,7 @@ def MRCA(sample, stats):
 
 
 def MLST(sample, stats):
+    results_dir = stats['results_dir']
     stats['ST'] = 'N/A'
     stats['allele1'] = 'N/A'
     stats['allele2'] = 'N/A'
@@ -410,7 +418,7 @@ def MLST(sample, stats):
     stats['allele6'] = 'N/A'
     stats['allele7'] = 'N/A'
 
-    base = Path(f'./results/{sample}')
+    base = Path(f'./{results_dir}/{sample}')
 
     inf = base / f'{sample}.MLST.csv'
     try:
@@ -432,6 +440,7 @@ def MLST(sample, stats):
 
 
 def erm41(sample, stats):
+    results_dir = stats['results_dir']
     stats['contig'] = 'N/A'
     stats['perc_id'] = 'N/A'
     stats['hit_length'] = 'N/A'
@@ -441,7 +450,7 @@ def erm41(sample, stats):
     stats['subject_start'] = 'N/A'
     stats['subject_end'] = 'N/A'
 
-    base = Path(f'./results/{sample}')
+    base = Path(f'./{results_dir}/{sample}')
 
     inf = base / f'{sample}.erm41.status'
     try:
@@ -464,12 +473,14 @@ def erm41(sample, stats):
 def main():
     try:
         sample_name = sys.argv[1]
+        results_dir = sys.argv[2]
     except IndexError:
         print("Sample name not supplied", file=sys.stderr)
         exit()
 
     stats = OrderedDict()
     stats['sample'] = sample_name
+    stats['results_dir'] = results_dir
     print('Collecting stats...', file=sys.stderr)
     stats = short_raw(sample_name, stats)
     print('  finished raw read QC stats...', file=sys.stderr)

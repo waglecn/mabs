@@ -134,6 +134,14 @@ rule register_gatk:
     shell:
         "echo {output} ; gatk3-register {params.gatk_jar} ; touch {output}"
 
+
+rule prep_references:
+    input:
+        expand("workflow/resources/alignment_references/{ref}", ref=[
+            'mabscessus', 'mmassiliense', 'mbolletii'
+        ])
+
+
 rule get_alignment_references:
     conda:
         "envs/ngd_phylo.yaml"
@@ -153,9 +161,9 @@ rule make_mapping_index:
         "envs/bwa.yaml"
     threads: 1
     input:
-        "workflow/resources/alignment_references/{ref,\w+}"
+        "workflow/resources/alignment_references/{ref}"
     output:
-        "workflow/resources/alignment_references/{ref\w+}.amb"
+        "workflow/resources/alignment_references/{ref}.amb"
     shell:
         "bwa-mem2 index {input}"
 

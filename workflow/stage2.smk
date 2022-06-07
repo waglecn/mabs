@@ -10,19 +10,19 @@ rule temp_MRCA_ref_alignment:
         execdir = exec_dir
     input:
         QC = 'QC_summary.csv',
-        S1 = "trimmed_input/{sample}.S1.fastq.gz",
-        R1 = "trimmed_input/{sample}.R1.fastq.gz",
-        R2 = "trimmed_input/{sample}.R2.fastq.gz",
+        tR1 = f"{res}/{{sample}}/input/R1.trim.fastq.gz",
+        tR2 = f"{res}/{{sample}}/input/R2.trim.fastq.gz",
+        tS1 = f"{res}/{{sample}}/input/S1.trim.fastq.gz",
     output:
         paired_temp = temp(
-            "MRCA_ref_mapping/{ref}/{sample}.paired.sorted.bam"
+            f"{res}/MRCA_ref_mapping/{{ref}}/paired.sorted.bam"
         ),
         single_temp = temp(
-            "MRCA_ref_mapping/{ref}/{sample}.single.sorted.bam"
+            f"{res}/MRCA_ref_mapping/{{ref}}/single.sorted.bam"
         ),
-        merge_temp = temp("MRCA_ref_mapping/{ref}/{sample}.merge.bam"),
+        merge_temp = temp(f"{res}/MRCA_ref_mapping/{{ref}}/merge.bam"),
         merge_sorted = temp(
-            "MRCA_ref_mapping/{ref}/temp.merged.{sample}.sorted.bam"
+            f"{res}/MRCA_ref_mapping/{{ref}}/temp.merged.sorted.bam"
         ),
     shell:
         "bwa mem -t {threads} -M "
@@ -44,12 +44,12 @@ rule temp_add_read_groups:
     threads: 1
     conda: "conda_envs/picard.yaml"
     input:
-        bam = "MRCA_ref_mapping/{ref}/temp.merged.{sample}.sorted.bam",
-        bai = "MRCA_ref_mapping/{ref}/temp.merged.{sample}.sorted.bam.bai"
+        bam = f"{res}/MRCA_ref_mapping/{{ref}}/temp.merged.sorted.bam",
+        bai = f"{res}/MRCA_ref_mapping/{{ref}}/temp.merged.sorted.bam.bai"
     output:
-        temp("MRCA_ref_mapping/{ref}/tempRG.merged.{sample}.sorted.bam")
+        temp(f"{res}/MRCA_ref_mapping/{{ref}}/tempRG.merged.sorted.bam")
     log:
-        "MRCA_ref_mapping/{ref}/{sample}.picard.RG.log"
+        f"{res}/MRCA_ref_mapping/{{ref}}/picard.RG.log"
     shell:
         "picard AddOrReplaceReadGroups -INPUT {input.bam} "
         "-OUTPUT {output} -SORT_ORDER coordinate -RGID {wildcards.sample} "
@@ -58,59 +58,54 @@ rule temp_add_read_groups:
         " 2>&1 | tee {log}"
 
 rule MRCA_ref_softclip_filter:
+    conda: "envs/mapping.yaml"
     threads: 1
-    params:
-        execdir = exec_dir
     input:
-        "MRCA_ref_mapping/{ref}/tempRG.merged.{sample}.sorted.bam"
+        f"{res}/MRCA_ref_mapping/{{ref}}/tempRG.merged.sorted.bam"
     output:
-        temp("MRCA_ref_mapping/{ref}/tempRGSC.merged.{sample}.sorted.bam"),
+        temp(f"{res}/MRCA_ref_mapping/{{ref}}/tempRGSC.merged.sorted.bam"),
     shell:
-        "{params.execdir}/scripts/sclips.py filter {input} > {output} "
+        "workflow/scripts/sclips.py filter {input} > {output} "
 
 
 rule MRCA_ref_gatk_realignment_intervals:
     threads: 1
     conda:
         "conda_envs/gatk3.yaml"
-    params:
-        execdir = exec_dir
     input:
-        bam = "MRCA_ref_mapping/{ref}/tempRGSC.merged.{sample}.sorted.bam",
-        bai = "MRCA_ref_mapping/{ref}/tempRGSC.merged.{sample}.sorted.bam.bai",
-        seqdict = f"{exec_dir}/resources/alignment_references/{{ref}}.dict",
-        fai = f"{exec_dir}/resources/alignment_references/{{ref}}.fasta.fai",
-        gatk = f"{exec_dir}/resources/gatk-registered"
+        bam = f"{res}/MRCA_ref_mapping/{{ref}}/tempRGSC.merged.sorted.bam",
+        bai = f"{res}/MRCA_ref_mapping/{{ref}}/tempRGSC.merged.sorted.bam.bai",
+        seqdict = "workflow/resources/alignment_references/{ref}.dict",
+        fai = "workflow/resources/alignment_references/{ref}.fasta.fai",
+        gatk = "workflow/resources/gatk-registered"
     output:
-        "MRCA_ref_mapping/{ref}/{sample}.RG_SC_RA.intervals"
+        f"{res}/MRCA_ref_mapping/{{ref}}/RG_SC_RA.intervals"
     log:
-        "MRCA_ref_mapping/{ref}/{sample}.gatk3_intervals.log"
+        f"{res}/MRCA_ref_mapping/{{ref}}/gatk3_intervals.log"
     shell:
         "gatk3 -nt 1 -T RealignerTargetCreator -R "
-        "{params.execdir}/resources/alignment_references/"
+        "workflow/resources/alignment_references/"
         "{wildcards.ref}.fasta "
         "-I {input.bam} -o {output} 2>&1 | tee {log}"
 
 rule MRCA_ref_gatk_realignment:
     threads: 1
-    params:
-        execdir = exec_dir
     conda:
         "conda_envs/gatk3.yaml"
     input:
-        bam = "MRCA_ref_mapping/{ref}/tempRGSC.merged.{sample}.sorted.bam",
-        bai = "MRCA_ref_mapping/{ref}/tempRGSC.merged.{sample}.sorted.bam.bai",
-        intervals = "MRCA_ref_mapping/{ref}/{sample}.RG_SC_RA.intervals",
+        bam = f"{res}/MRCA_ref_mapping/{{ref}}/tempRGSC.merged.sorted.bam",
+        bai = f"{res}/MRCA_ref_mapping/{{ref}}/tempRGSC.merged.sorted.bam.bai",
+        intervals = f"{res}/MRCA_ref_mapping/{{ref}}/RG_SC_RA.intervals",
     output:
-        "MRCA_ref_mapping/{ref}/{sample}.RG_SC_RA.bam"
+        f"{res}/MRCA_ref_mapping/{{ref}}/RG_SC_RA.bam"
     log:
-        "MRCA_ref_mapping/{ref}/{sample}.gatk_realign.log"
+        f"{res}/MRCA_ref_mapping/{{ref}}/gatk_realign.log"
     shell:
         "gatk3 -nt 1 -rf OverclippedRead "
         # "--filter_is_too_short_value 100 -minRead 100 "
         # "--do_not_require_softclips_both_ends -rf ReadLength -maxRead 500 "
         "-T IndelRealigner "
-        "-R {params.execdir}/resources/alignment_references/"
+        "-R workflow/resources/alignment_references/"
         "{wildcards.ref}.fasta "
         "-I {input.bam} -targetIntervals {input.intervals} -o {output} "
         " 2>&1 | tee {log}"

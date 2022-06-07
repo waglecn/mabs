@@ -147,11 +147,11 @@ rule kraken2_contamination_trim_paired:
         R1 = f"{res}/{{sample}}/input/R1.trim.fastq.gz",
         R2 = f"{res}/{{sample}}/input/R2.trim.fastq.gz"
     output:
-        report = f"{res}/{{sample}}/input/kraken.trim.paired",
+        report = f"{res}/{{sample}}/input/kraken.trimmed.paired",
     params:
         kdb = config['kraken_db']
     log:
-        f"{res}/{{sample}}/input/kraken.trim.paired.log"
+        f"{res}/{{sample}}/input/kraken.trimmed.paired.log"
     shell:
         "kraken2 --db {params.kdb} --threads {threads} --quick "
         "--gzip-compressed --paired {input.R1} {input.R2} "
@@ -165,11 +165,11 @@ rule kraken2_contamination_single:
         S1 = f"{res}/{{sample}}/input/S1.trim.fastq.gz",
         S2 = f"{res}/{{sample}}/input/S2.trim.fastq.gz"
     output:
-        report = f"{res}/{{sample}}/input/kraken.trim.single",
+        report = f"{res}/{{sample}}/input/kraken.trimmed.single",
     params:
         kdb = config['kraken_db']
     log:
-        f"{res}/{{sample}}/input/kraken.trim.single.log"
+        f"{res}/{{sample}}/input/kraken.trimmed.single.log"
     shell:
         "kraken2 --db {params.kdb} --threads {threads} --quick "
         "--gzip-compressed {input.S1} {input.S2} "
@@ -405,6 +405,8 @@ rule MRCA_MLST:
 
 rule QC_stats_per_sample:
     conda: "envs/phy_plots.yaml"
+    params:
+        resdir = res
     input:
         tree = f"{res}/mashtree/assembly_mashtree.complete.tree",
         raw_kraken = f"{res}/{{sample}}/input/kraken.raw.paired",
@@ -426,7 +428,8 @@ rule QC_stats_per_sample:
     log:
         f"{res}/{{sample}}/sample.QC.log"
     shell:
-        "workflow/scripts/sample_stats.py {wildcards.sample} {input.tree} "
+        "workflow/scripts/sample_stats.py {wildcards.sample} {params.resdir} "
+        "{input.tree} "
         "{input.trim} {input.single_kraken2} {input.pair_kraken2} "
         "{input.short_assembly} {input.long_assembly} "
         "{input.long_polish_assembly} {input.MRCA} {input.erm41} "

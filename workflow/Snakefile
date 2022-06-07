@@ -71,7 +71,7 @@ rule stage1:
         ###############
         # STAGE 1 - QC
         ###############
-        "QC_summary.csv"
+        f"{res}/QC_summary.csv"
 
 rule stage1_all_outputs:
     input:
@@ -152,59 +152,64 @@ rule stage1_all_outputs:
         # type assemblies using MRCAs from mashtree
         f"{res}/QC_summary.csv"
 
-# rule stage2:
-#     input:
-#         ##################################
-#         # STAGE 2 - type-specific analyses
-#         ##################################
-#         [
-#             "MRCA_ref_mapping/{ref}/{sample}.RG_SC_RA.intervals".format(
-#                 ref=ref_from_QC(s), sample=s
-#             ) for s in filt_samples
-#         ],
-#         [
-#             "MRCA_ref_mapping/{ref}/{sample}.RG_SC_RA.bam".format(
-#                 ref=ref_from_QC(s), sample=s
-#             ) for s in filt_samples
-#         ],
-#         [
-#             "MRCA_ref_mapping/{ref}/{sample}.RG_SC_RA.mpileup".format(
-#                 ref=ref_from_QC(s), sample=s
-#             ) for s in filt_samples
-#         ],
-#         [
-#             "MRCA_ref_mapping/{ref}/{sample}.RG_SC_RA_filter.vcf.gz".format(
-#                 ref=ref_from_QC(s), sample=s
-#             ) for s in filt_samples
-#         ],
-#         [
-#             "MRCA_ref_mapping/{ref}/{sample}.RG_SC_RA_filter"
-#             ".failed.vcf.gz".format(
-#                 ref=ref_from_QC(s), sample=s
-#             ) for s in filt_samples
-#         ],
-#         [
-#             "MRCA_ref_mapping/{ref}/{sample}.RG_SC_RA_filter"
-#             ".AD_failed.vcf.gz".format(
-#                 ref=ref_from_QC(s), sample=s
-#             ) for s in filt_samples
-#         ],
-#         [
-#             "MRCA_ref_mapping/{ref}/{sample}.RG_SC_RA_filter.hvar"
-#             ".vcf.gz".format(
-#                 ref=ref_from_QC(s), sample=s
-#             ) for s in filt_samples
-#         ],
-#         [
-#             "MRCA_ref_mapping/{ref}/{sample}.RG_SC_RA.0cov.bed".format(
-#                 ref=ref_from_QC(s), sample=s
-#             ) for s in filt_samples
-#         ],
-#         [
-#             "MRCA_ref_mapping/{ref}/{sample}.RG_SC_RA_filter.hvar_DF.bed".format(
-#                 ref=ref_from_QC(s), sample=s
-#             ) for s in filt_samples
-#         ],
+rule stage2:
+    input:
+        ##################################
+        # STAGE 2 - type-specific analyses
+        ##################################
+        [
+            "{res}/{sample}/MRCA_ref_mapping/{ref}/RG_SC_RA.intervals".format(
+                 res=res, ref=ref_from_QC(s),
+                sample=s
+            ) for s in filt_samples
+        ],
+        [
+            "{res}/{sample}/MRCA_ref_mapping/{ref}/RG_SC_RA.bam".format(
+                res=res, ref=ref_from_QC(s),
+                sample=s,
+            ) for s in filt_samples
+        ],
+        [
+            "{res}/{sample}/MRCA_ref_mapping/{ref}/RG_SC_RA.mpileup".format(
+                res=res, ref=ref_from_QC(s),
+                sample=s
+            ) for s in filt_samples
+        ],
+        [
+            "{res}/{sample}/MRCA_ref_mapping/{ref}/"
+            "RG_SC_RA_filter.vcf.gz".format(
+                res=res, ref=ref_from_QC(s),
+                sample=s 
+            )  for s in filt_samples
+        ],
+        # [
+        #     "MRCA_ref_mapping/{ref}/{sample}.RG_SC_RA_filter"
+        #     ".failed.vcf.gz".format(
+        #         ref=ref_from_QC(s), sample=s
+        #     ) for s in filt_samples
+        # ],
+        # [
+        #     "MRCA_ref_mapping/{ref}/{sample}.RG_SC_RA_filter"
+        #     ".AD_failed.vcf.gz".format(
+        #         ref=ref_from_QC(s), sample=s
+        #     ) for s in filt_samples
+        # ],
+        # [
+        #     "MRCA_ref_mapping/{ref}/{sample}.RG_SC_RA_filter.hvar"
+        #     ".vcf.gz".format(
+        #         ref=ref_from_QC(s), sample=s
+        #     ) for s in filt_samples
+        # ],
+        # [
+        #     "MRCA_ref_mapping/{ref}/{sample}.RG_SC_RA.0cov.bed".format(
+        #         ref=ref_from_QC(s), sample=s
+        #     ) for s in filt_samples
+        # ],
+        # [
+        #     "MRCA_ref_mapping/{ref}/{sample}.RG_SC_RA_filter.hvar_DF.bed".format(
+        #         ref=ref_from_QC(s), sample=s
+        #     ) for s in filt_samples
+        # ],
 
 # rule stage3:
 #     input:
