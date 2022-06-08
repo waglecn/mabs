@@ -201,14 +201,13 @@ rule shovill_assembly:
         " 2>&1 | tee {log} ; "
         f"cp {res}/{{wildcards.sample}}/shovill_assembly/contigs.fa {{output}}"
 
-
 rule dflye_assembly:
     threads: 8
     conda:
         "envs/dflye.yaml"
     params:
         size = config['dflye_genome_size'],
-        medaka = config['dflye_medaka'],
+        medaka = config['_DFLYE_MEDAKA'],
         racon = config['dflye_racon']
     input:
         f"{res}/{{sample}}/input/long.fastq.gz"
@@ -219,7 +218,7 @@ rule dflye_assembly:
     shell:
         "dragonflye --reads {input} --trim --gsize {params.size} --outdir "
         f"{res}/{{wildcards.sample}}/dflye --force "
-        "--cpus {threads} --medaka {params.medaka} --racon {params.racon} "
+        "--cpus {threads} {params.medaka} --racon {params.racon} "
         "--model r941_min_fast_g507 2>&1 | tee {log}"
 
 rule dflye_short_polish_assembly:
@@ -228,7 +227,7 @@ rule dflye_short_polish_assembly:
         "envs/dflye.yaml"
     params:
         size = config['dflye_genome_size'],
-        medaka = config['dflye_medaka'],
+        medaka = config['_DFLYE_MEDAKA'],
         racon = config['dflye_racon']
     input:
         L = f"{res}/{{sample}}/input/long.fastq.gz",
@@ -244,7 +243,7 @@ rule dflye_short_polish_assembly:
         "dragonflye --reads {input.L} --R1 {input.R1} --R2 {input.R2} "
         "--trim --gsize {params.size} --outdir "
         f"{res}/{{wildcards.sample}}/dflye_short_polish "
-        "--cpus {threads} --racon {params.racon} --medaka {params.medaka} "
+        "--cpus {threads} --racon {params.racon} {params.medaka} "
         # "--pilon 1 " # ignore for now, due to memory
         "--polypolish 3 --force "
         "--model r941_min_fast_g507 2>&1 | tee {log}"

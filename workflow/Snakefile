@@ -48,6 +48,12 @@ print('Including {} isolates (from original {} isolates)'.format(
     len(filt_samples), len(sample_names)
 ))
 
+# medaka parsing to turn off
+if config['dflye_medaka'] < 1:
+    config['_DFLYE_MEDAKA'] = ""
+else:
+    config['_DFLYE_MEDAKA'] = f" --medaka {config['dfyle_medaka']}"
+
 # Rule "all" default catches output of other rules as input in order to
 # simplify running the workflow
 # - add target rules here as they are implemented
