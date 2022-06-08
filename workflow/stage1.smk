@@ -433,7 +433,7 @@ rule QC_stats_per_sample:
         "{input.short_assembly} {input.long_assembly} "
         "{input.long_polish_assembly} {input.MRCA} {input.erm41} "
         "{input.mabs_bam} "
-        "{input.mabs_depth} {input.mlst} {input.MRCA} > {output} 2> tee {log}"
+        "{input.mabs_depth} {input.mlst} {input.MRCA} > {output} 2> {log}"
 
 
 rule merge_QC_summary:
