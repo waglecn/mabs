@@ -15,7 +15,7 @@ workflow/resources/gatk-registered
 workflow/resources/GenomeAnalysisTK.jar
 wokrflow/resources/alignment_references/**
 workflow/resources/mab_mabscessus/**
-config.*.yaml
+config/config.yaml
 samples.csv*
 samples.*.csv*
 *kraken2*/*
