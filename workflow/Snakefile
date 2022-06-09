@@ -54,7 +54,7 @@ if config['dflye_medaka'] < 1:
 else:
     config['_DFLYE_MEDAKA'] = f" --medaka {config['dflye_medaka']} " \
         f"--model {config['dflye_medaka_model']} " \
-        f"--medaka_opts {config['dflye_medaka_opts']} "
+        f"--medaka_opts \'{config['dflye_medaka_opts']}\' "
 
 # Rule "all" default catches output of other rules as input in order to
 # simplify running the workflow
