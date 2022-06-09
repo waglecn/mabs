@@ -52,7 +52,9 @@ print('Including {} isolates (from original {} isolates)'.format(
 if config['dflye_medaka'] < 1:
     config['_DFLYE_MEDAKA'] = ""
 else:
-    config['_DFLYE_MEDAKA'] = f" --medaka {config['dfyle_medaka']}"
+    config['_DFLYE_MEDAKA'] = f" --medaka {config['dflye_medaka']} " \
+        f"--model {config['dflye_medaka_model']} " \
+        f"--medaka_opts {config['dflye_medaka_opts']} "
 
 # Rule "all" default catches output of other rules as input in order to
 # simplify running the workflow
@@ -97,10 +99,21 @@ rule stage1_all_outputs:
         ),
         # post-trim QC
         expand(
-            "{res}/{s}/input/{read}.trim_fastqc.html",
+            "{res}/{s}/input/{read}.trim_fastqc.data.txt",
             res=res,
             s=sample_names,
             read=["R1", "R2", "S1", "S2"],
+        ),
+        expand(
+            "{res}/{s}/input/{read}_fastqc.data.txt",
+            res=res,
+            s=sample_names,
+            read=["R1", "R2"],
+        ),
+        expand(
+            "{res}/{s}/input/long_fastqc.data.txt",
+            res=res,
+            s=long_sample_names,
         ),
         # Kraken contamination, paired and single
         expand(

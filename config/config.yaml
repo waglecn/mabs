@@ -19,8 +19,12 @@ shovill_tempdir: "/home/nick/Downloads/tmp"
 # set the amount of mem per assembly for shovill in GB
 shovill_mem: 16
 # dragonflye long read assembly
-# number of medaka passes
-dflye_medaka: 0
+# these options are all or nothing, need to have dflye_medka > 0 for 
+# medaka to be used at all!
+# number of medaka passes 
+dflye_medaka: 1
+dflye_medaka_model: "r941_min_fast_g507"
+dflye_medaka_opts: '-b 50'
 # number of racon passes
 dflye_racon: 3
 # estimated genome size

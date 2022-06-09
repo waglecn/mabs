@@ -87,6 +87,99 @@ ERM41
 """
 
 
+def parse_fastqc_data(infile):
+    data = [l.strip() for l in open(infile, 'r')]
+    sections = []
+    start = 1
+    for i, l in enumerate(data[0:]):
+        if ">>END_MODULE" in l:
+            sections.append(data[start:i + 1])
+            start = i + 1
+    # Basic Statistics
+    # Per base sequence quality
+    # Sequence Length Distribution
+    BS = []
+    PSQS = []
+    SLD = []
+    for s in sections:
+        if '>>Basic Statistics' in s[0]:
+            BS = s
+        if '>>Per sequence quality scores' in s[0]:
+            PSQS = s
+        if '>>Sequence Length Distribution' in s[0]:
+            SLD = s
+    assert len(BS) is not 0
+    assert len(PSQS) is not 0
+    assert len(SLD) is not  0
+
+    # parse PSQS
+    num = 0
+    SQ = 0
+    PSQS = [a.split('\t') for a in PSQS if a[0] is not '>']
+    for i in PSQS[1:]:
+        SQ += float(i[0]) * float(i[1])
+        num += float(i[1])
+    MQ = SQ / num
+
+    total_bases = 0
+    approx = False
+    SLD = [a.split('\t') for a in SLD if a[0] is not '>']
+    for i in SLD[1:]:
+        if '-' in i[0]:
+            approx = True
+            i[0] = i[0].split('-')
+            low = float(i[0][0])
+            high = float(i[0][1])
+            mean = (high - low) / 2.0
+            total_bases += (mean * float(i[1]))
+        else:
+            total_bases += (float(i[0]) * float(i[1]))
+    Mlen = (total_bases / num)
+
+    total_bases = round(total_bases, -6)
+
+    assert num is not 0
+    assert MQ is not 0
+    assert total_bases is not '0'
+
+    return(num, MQ, total_bases, Mlen)
+
+
+def fastqc_short_raw(sample, stats):
+    base = Path(f"{stats['results_dir']}/{sample}")
+
+    stats['raw_QC_num_pairs'] = 'N/A'
+    stats['raw_QC_reads1'] = 'N/A'
+    stats['raw_QC_reads2'] = 'N/A'
+    stats['raw_QC_length'] = 'N/A'
+    stats['raw_QC_length1'] = 'N/A'
+    stats['raw_QC_length2'] = 'N/A'
+    stats['raw_QC_num_bases'] = 'N/A'
+    stats['raw_QC_bases1'] = 'N/A'
+    stats['raw_QC_bases2'] = 'N/A'
+
+
+    for i in ['1', '2']:
+        inf = base / 'input' / f'R{i}_fastqc.data.txt'
+        try:
+            num, MQ, total_bases, Mlen = parse_fastqc_data(inf)
+        except Exception:
+            print('Problem opening file: {}'.format(inf, file=sys.stderr))
+            return stats
+
+        stats[f'raw_QC_reads{i}'] = num
+        stats[f'raw_QC_length{i}'] = Mlen
+        stats[f'raw_QC_bases{i}'] = total_bases
+
+    stats['raw_QC_num_pairs'] = stats['raw_QC_reads1']
+    stats['raw_QC_length'] = (
+        stats['raw_QC_length1'] + stats['raw_QC_length2']
+    ) / 2.0
+    stats['raw_QC_num_bases'] = stats['raw_QC_bases1'] + stats['raw_QC_bases2']
+
+    return stats
+
+
 def short_raw(sample, stats):
     results_dir = stats['results_dir']
     base = Path(f'{results_dir}/{sample}')
@@ -105,7 +198,8 @@ def short_raw(sample, stats):
     length1 = 0
     bases1 = 0
 
-    inf = base / 'input' / 'R1.fastq.gz'
+    for i in ['1', '2']:        
+        inf = base / 'input' / f'R{i}.fastq.gz'
     try:
         with gzip.open(inf, 'rt') as handle:
             records1 = SeqIO.parse(handle, format='fastq')
@@ -144,6 +238,50 @@ def short_raw(sample, stats):
     stats['raw_QC_bases2'] = bases2
 
     # pprint.pprint(stats['raw'])
+    return stats
+
+def fastqc_post_trim_QC(sample, stats):
+    base = Path(f"{stats['results_dir']}/{sample}")
+
+    stats['post_trim_QC_num_pairs'] = 'N/A'
+    stats['post_trim_QC_readsR1'] = 'N/A'
+    stats['post_trim_QC_readsR2'] = 'N/A'
+    stats['post_trim_QC_readsS1'] = 'N/A'
+    stats['post_trim_QC_readsS2'] = 'N/A'
+    stats['post_trim_QC_mean_lengthR1'] = 'N/A'
+    stats['post_trim_QC_mean_lengthR2'] = 'N/A'
+    stats['post_trim_QC_mean_lengthS1'] = 'N/A'
+    stats['post_trim_QC_mean_lengthS2'] = 'N/A'
+    stats['post_trim_QC_num_paired_bases'] = 'N/A'
+    stats['post_trim_QC_num_single_bases'] = 'N/A'
+    stats['post_trim_QC_basesR1'] = 'N/A'
+    stats['post_trim_QC_basesR2'] = 'N/A'
+    stats['post_trim_QC_basesS1'] = 'N/A'
+    stats['post_trim_QC_basesS2'] = 'N/A'
+
+    for i in ['R1', 'R2', 'S1', 'S2']:
+        inf = base / 'input' / f'{i}.trim_fastqc.data.txt'
+        try:
+            num, MQ, total_bases, Mlen = parse_fastqc_data(inf)
+        except Exception:
+            print('Problem opening file: {}'.format(inf, file=sys.stderr))
+            return stats
+
+        stats[f'post_trim_QC_reads{i}'] = num
+        stats[f'post_trim_QC_mean_length{i}'] = Mlen
+        stats[f'post_trim_QC_bases{i}'] = total_bases
+
+    stats['post_trim_QC_num_pairs'] = (
+        stats['post_trim_QC_readsR1'] + stats['post_trim_QC_readsR2']
+    )
+    stats['post_trim_QC_num_paired_bases'] = (
+        stats['post_trim_QC_basesR1'] + stats['post_trim_QC_basesR2']
+    )
+    stats['post_trim_QC_num_single_bases'] = (
+        stats['post_trim_QC_basesS1'] + stats['post_trim_QC_basesS2']
+    )
+
+
     return stats
 
 
@@ -191,6 +329,31 @@ def post_trim_QC(sample, stats):
     )
 
     #pprint.pprint(stats['post_trim_QC'])
+    return stats
+
+
+def fastqc_long_QC(sample, stats):
+    results_dir = stats['results_dir']
+    base = Path(f'./{results_dir}/{sample}')
+
+    stats['long_QC_num_reads'] = 'N/A'
+    stats['long_QC_mean_length'] = 'N/A'
+    stats['long_QC_mean_qual'] = 'N/A'
+    stats['long_QC_num_bases'] = 'N/A'
+
+    inf = base / 'input' / 'long_fastqc.data.txt'
+
+    try:
+        num, MQ, total_bases, Mlen = parse_fastqc_data(inf)
+    except Exception:
+        print('Problem opening file: {}'.format(inf, file=sys.stderr))
+        return stats
+
+    stats['long_QC_num_reads'] = num
+    stats['long_QC_mean_length'] = Mlen
+    stats['long_QC_mean_qual'] = MQ
+    stats['long_QC_num_bases'] = total_bases
+
     return stats
 
 
@@ -409,28 +572,30 @@ def MRCA(sample, stats):
 
 def MLST(sample, stats):
     results_dir = stats['results_dir']
-    stats['ST'] = 'N/A'
-    stats['allele1'] = 'N/A'
-    stats['allele2'] = 'N/A'
-    stats['allele3'] = 'N/A'
-    stats['allele4'] = 'N/A'
-    stats['allele5'] = 'N/A'
-    stats['allele6'] = 'N/A'
-    stats['allele7'] = 'N/A'
+    stats['pubMLST_scheme'] = 'N/A'
+    stats['pubMLST_ST'] = 'N/A'
+    stats['pubMLST_allele1'] = 'N/A'
+    stats['pubMLST_allele2'] = 'N/A'
+    stats['pubMLST_allele3'] = 'N/A'
+    stats['pubMLST_allele4'] = 'N/A'
+    stats['pubMLST_allele5'] = 'N/A'
+    stats['pubMLST_allele6'] = 'N/A'
+    stats['pubMLST_allele7'] = 'N/A'
 
     base = Path(f'./{results_dir}/{sample}')
 
     inf = base / f'{sample}.MLST.csv'
     try:
         data = [l.strip().split("\t") for l in open(inf, 'r')]
-        stats['ST'] = data[0][1]
-        stats['allele1'] = data[0][2]
-        stats['allele2'] = data[0][3]
-        stats['allele3'] = data[0][4]
-        stats['allele4'] = data[0][5]
-        stats['allele5'] = data[0][6]
-        stats['allele6'] = data[0][7]
-        stats['allele7'] = data[0][8]
+        stats['pubMLST_scheme'] = data[0][1]
+        stats['pubMLST_ST'] = data[0][2]
+        stats['pubMLST_allele1'] = data[0][3]
+        stats['pubMLST_allele2'] = data[0][4]
+        stats['pubMLST_allele3'] = data[0][5]
+        stats['pubMLST_allele4'] = data[0][6]
+        stats['pubMLST_allele5'] = data[0][7]
+        stats['pubMLST_allele6'] = data[0][8]
+        stats['pubMLST_allele7'] = data[0][9]
 
     except Exception:
         print("Problem opening file: {}".format(inf), file=sys.stderr)
@@ -441,28 +606,28 @@ def MLST(sample, stats):
 
 def erm41(sample, stats):
     results_dir = stats['results_dir']
-    stats['contig'] = 'N/A'
-    stats['perc_id'] = 'N/A'
-    stats['hit_length'] = 'N/A'
-    stats['gaps'] = 'N/A'
-    stats['query_start'] = 'N/A'
-    stats['query_end'] = 'N/A'
-    stats['subject_start'] = 'N/A'
-    stats['subject_end'] = 'N/A'
+    stats['erm(41)_contig'] = 'N/A'
+    stats['erm(41)_perc_id'] = 'N/A'
+    stats['erm(41)_hit_length'] = 'N/A'
+    stats['erm(41)_gaps'] = 'N/A'
+    stats['erm(41)_query_start'] = 'N/A'
+    stats['erm(41)_query_end'] = 'N/A'
+    stats['erm(41)_subject_start'] = 'N/A'
+    stats['erm(41)_subject_end'] = 'N/A'
 
     base = Path(f'./{results_dir}/{sample}')
 
     inf = base / f'{sample}.erm41.status'
     try:
         data = [l.strip().split("\t") for l in open(inf, 'r')]
-        stats['contig'] = data[0][0]
-        stats['perc_id'] = data[0][1]
-        stats['hit_length'] = data[0][2]
-        stats['gaps'] = data[0][3]
-        stats['query_start'] = data[0][4]
-        stats['query_end'] = data[0][5]
-        stats['subject_start'] = data[0][6]
-        stats['subject_end'] = data[0][7]
+        stats['erm(41)_contig'] = data[0][0]
+        stats['erm(41)_perc_id'] = data[0][1]
+        stats['erm(41)_hit_length'] = data[0][2]
+        stats['erm(41)_gaps'] = data[0][3]
+        stats['erm(41)_query_start'] = data[0][4]
+        stats['erm(41)_query_end'] = data[0][5]
+        stats['erm(41)_subject_start'] = data[0][6]
+        stats['erm(41)_subject_end'] = data[0][7]
 
     except Exception:
         print("Problem opening file: {}".format(inf), file=sys.stderr)
@@ -481,11 +646,14 @@ def main():
     stats = OrderedDict()
     stats['sample'] = sample_name
     stats['results_dir'] = results_dir
+
     print('Collecting stats...', file=sys.stderr)
-    stats = short_raw(sample_name, stats)
+    stats = fastqc_short_raw(sample_name, stats)
     print('  finished raw read QC stats...', file=sys.stderr)
-    stats = post_trim_QC(sample_name, stats)
+    stats = fastqc_post_trim_QC(sample_name, stats)
     print('  finished trimmed read QC stats...', file=sys.stderr)
+    stats = fastqc_long_QC(sample_name, stats)
+    print('  finished long read QC stats...', file=sys.stderr)
     stats = kraken(sample_name, stats)
     print('  finished kraken QC stats...', file=sys.stderr)
     stats = short_assembly(sample_name, stats)

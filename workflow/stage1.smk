@@ -74,10 +74,16 @@ rule pre_trim_QC:
     input:
         f"{res}/{{sample}}/input/{{R}}.fastq.gz",
     output:
-        f"{res}/{{sample}}/input/{{R}}_fastqc.html"
+        zipf = f"{res}/{{sample}}/input/{{R}}_fastqc.zip",
+        html = f"{res}/{{sample}}/input/{{R}}_fastqc.html",
+        data = f"{res}/{{sample}}/input/{{R}}_fastqc.data.txt"
+    wildcard_constraints:
+        R ="R\d"
     shell:
         "fastqc --noextract  -t {threads} "
-        f"-o {res}/{{wildcards.sample}}/input {{input}}"
+        f"-o {res}/{{wildcards.sample}}/input {{input}} ; "
+        f"unzip -p {res}/{{wildcards.sample}}/input/{{wildcards.R}}_fastqc.zip "
+        f"{{wildcards.R}}_fastqc/fastqc_data.txt > {{output.data}}"
 
 
 # Trimming of raw (merged) short reads
@@ -110,12 +116,37 @@ rule post_trim_QC:
     conda:
         "envs/fastqc.yaml"
     input:
-        f"{res}/{{sample}}/input/{{read}}.trim.fastq.gz"
+        f"{res}/{{sample}}/input/{{R}}.trim.fastq.gz"
     output:
-        f"{res}/{{sample}}/input/t{{read}}.trim_fastqc.html"
+        zipf = f"{res}/{{sample}}/input/{{R}}.trim_fastqc.zip",
+        html = f"{res}/{{sample}}/input/{{R}}.trim_fastqc.html",
+        data = f"{res}/{{sample}}/input/{{R}}.trim_fastqc.data.txt"
+    wildcard_constraints:
+        R = "[RS]\d"
     shell:
         "fastqc --noextract -t {threads} "
-        f"-o {res}/{{wildcards.sample}}/input {{input}}"
+        f"-o {res}/{{wildcards.sample}}/input {{input}} ; "
+        f"unzip -p {res}/{{wildcards.sample}}/input/{{wildcards.R}}.trim_fastqc.zip "
+        f"{{wildcards.R}}.trim_fastqc/fastqc_data.txt > {{output.data}}"
+
+
+rule pre_nano_QC:
+    threads: 1
+    conda:
+        "envs/fastqc.yaml"
+    input:
+        f"{res}/{{sample}}/input/long.fastq.gz"
+    output:
+        zipf = f"{res}/{{sample}}/input/long_fastqc.html",
+        html = f"{res}/{{sample}}/input/long_fastqc.zip",
+        data = f"{res}/{{sample}}/input/long_fastqc.data.txt"
+    shell:
+        "fastqc --noextract -t {threads} "
+        f"-o {res}/{{wildcards.sample}}/input {{input}} ; "
+        f"unzip -p {res}/{{wildcards.sample}}/input/long_fastqc.zip "
+        f"long_fastqc/fastqc_data.txt > {{output.data}}"
+
+
 
 # Kraken2 contamination on the merged raw paired input
 rule kraken2_contamination_raw_paired:
@@ -219,7 +250,7 @@ rule dflye_assembly:
         "dragonflye --reads {input} --trim --gsize {params.size} --outdir "
         f"{res}/{{wildcards.sample}}/dflye --force "
         "--cpus {threads} {params.medaka} --racon {params.racon} "
-        "--model r941_min_fast_g507 2>&1 | tee {log}"
+        "2>&1 | tee {log}"
 
 rule dflye_short_polish_assembly:
     threads: 8
@@ -246,7 +277,7 @@ rule dflye_short_polish_assembly:
         "--cpus {threads} --racon {params.racon} {params.medaka} "
         # "--pilon 1 " # ignore for now, due to memory
         "--polypolish 3 --force "
-        "--model r941_min_fast_g507 2>&1 | tee {log}"
+        " 2>&1 | tee {log}"
 
 
 # Kraken2 contamination of assembly
@@ -407,6 +438,13 @@ rule QC_stats_per_sample:
     params:
         resdir = res
     input:
+        short_preR1_fastqc = f"{res}/{{sample}}/input/R1_fastqc.data.txt",
+        short_preR2_fastqc = f"{res}/{{sample}}/input/R2_fastqc.data.txt",
+        short_tR1_fastqc = f"{res}/{{sample}}/input/R1.trim_fastqc.data.txt",
+        short_tR2_fastqc = f"{res}/{{sample}}/input/R2.trim_fastqc.data.txt",
+        short_tS1_fastqc = f"{res}/{{sample}}/input/S1.trim_fastqc.data.txt",
+        short_tS2_fastqc = f"{res}/{{sample}}/input/S2.trim_fastqc.data.txt",
+        long_fastqc = f"{res}/{{sample}}/input/long_fastqc.data.txt",
         tree = f"{res}/mashtree/assembly_mashtree.complete.tree",
         raw_kraken = f"{res}/{{sample}}/input/kraken.raw.paired",
         trim = f"{res}/{{sample}}/input/trimmomatic.log",
