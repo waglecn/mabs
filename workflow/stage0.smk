@@ -161,12 +161,14 @@ rule get_alignment_references:
     params:
         acc = lambda wildcards: config['mash_ref_taxa'][wildcards.ref]
     output:
-        "workflow/resources/alignment_references/{ref,\w+}.fasta"
+        fn = "workflow/resources/alignment_references/{ref,\w+}.fasta",
+        gbk = "workflow/resources/alignment_references/{ref,\w+}.gbk"
     shell:
-        "ngd -s refseq -r3 --flat-output -A {params.acc} -F fasta "
+        "ngd -s refseq -r3 --flat-output -A {params.acc} -F genbank,fasta "
         "-o workflow/resources/alignment_references bacteria ; "
-        "gunzip -c workflow/resources/alignment_references/{params.acc}*.gz > "
-        "{output} "
+        "gunzip -f workflow/resources/alignment_references/{params.acc}*.gz ;"
+        "mv workflow/resources/alignment_references/{params.acc}*.fna {output.fn} ;"
+        "mv workflow/resources/alignment_references/{params.acc}*.gbff {output.gbk} ;"
 
 rule make_mapping_bwa_index:
     conda:

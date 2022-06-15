@@ -473,6 +473,19 @@ rule QC_stats_per_sample:
         "{input.mabs_bam} "
         "{input.mabs_depth} {input.mlst} {input.MRCA} > {output} 2> {log}"
 
+rule prokka_annotate_dflye:
+    conda:
+        "envs/prokka.yaml"
+    threads: 8
+    input:
+        f"{res}/{{sample}}/{{dflye}}/contigs.fa"
+    output:
+        f"{res}/{{sample}}/{{sample}}.{{dflye}}.prokka.gff"
+    shell:
+        "prokka --prefix {wildcards.sample}.{wildcards.dflye}.prokka "
+        f"--outdir {res}/{{wildcards.sample}}/ --force "
+        "--compliant --cpus {threads} {input}"
+
 
 rule merge_QC_summary:
     priority: 10
@@ -489,3 +502,4 @@ rule merge_QC_summary:
         f"{res}/QC_summary.csv"
     shell:
         "workflow/scripts/merge_QC_csv.py {output} {input}"
+

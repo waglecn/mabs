@@ -8,12 +8,13 @@ __pycache__/
 
 samples.yaml
 results/*
+results*/*
 notes.md
 *deletelist
 ?-data/**
 workflow/resources/gatk-registered
 workflow/resources/GenomeAnalysisTK.jar
-wokrflow/resources/alignment_references/**
+workflow/resources/alignment_references/**
 workflow/resources/mab_mabscessus/**
 config/config.yaml
 samples.csv*

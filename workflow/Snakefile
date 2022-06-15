@@ -56,6 +56,7 @@ else:
         f"--model {config['dflye_medaka_model']} " \
         f"--medaka_opts \'{config['dflye_medaka_opts']}\' "
 
+
 # Rule "all" default catches output of other rules as input in order to
 # simplify running the workflow
 # - add target rules here as they are implemented
@@ -68,6 +69,7 @@ include: "stage1.smk"
 # # variant calling
 include: "stage2.smk"
 # # variant counting
+include: "stage3.smk"
 # include: "SNP_counts.smk"
 
 
@@ -169,7 +171,11 @@ rule stage1_all_outputs:
         f"{res}/mashtree/assembly_mashtree.complete.tree",
         f"{res}/mashtree/assembly_mashtree.complete.matrix",
         # type assemblies using MRCAs from mashtree
-        f"{res}/QC_summary.csv"
+        f"{res}/QC_summary.csv",
+        expand(
+            "{res}/{{sample}}/{{sample}}.{{dflye}}.prokka.gff",
+            res=res, sample=both_samples, dflye="dflye_short_polish"
+        )
 
 rule stage2:
     input:
@@ -231,290 +237,96 @@ rule stage2:
             ) for s in filt_samples
         ],
 
-# rule stage3:
-#     input:
-#         expand(
-#             "MRCA_ref_mapping/{ref}.RG_SC_RA.merge.0cov.bed",
-#             ref={ref_from_QC(s) for s in filt_samples},
-#         ),
-#         expand(
-#             "MRCA_ref_mapping/{ref}.RG_SC_RA.merge.DF.bed",
-#             ref={ref_from_QC(s) for s in filt_samples},
-#         ),
-#         expand(
-#             "MRCA_ref_mapping/{ref}.RG_SC_RA.merge.bed",
-#             ref={ref_from_QC(s) for s in filt_samples},
-#         ),
-#         [
-#             "filtered_vcf/{ref}/{sample}.RG_SC_RA_bedfilter.vcf.gz".format(
-#                 ref=ref_from_QC(s), sample=s
-#             ) for s in filt_samples
-#         ],
-#         [
-#             "filtered_vcf/{ref}/{sample}.RG_SC_RA_bedfilter"
-#             ".consensus.fasta".format(
-#                 ref=ref_from_QC(s), sample=s
-#             ) for s in filt_samples
-#         ],
-#         [
-#             "gubbins/{ref}/{sample}.RG_SC_RA_bedfilter_gubbins.fasta".format(
-#                 ref=ref_from_QC(s), sample=s
-#             ) for s in filt_samples
-#         ],
-#         expand(
-#             "gubbins/{ref}.concatenated.fasta", 
-#             ref={ref_from_QC(s)  for s in filt_samples}
-#         ),
-#         expand(
-#             "gubbins/{ref}.gubbins.done",
-#             ref={ref_from_QC(s)  for s in filt_samples}
-#         ),
-#         expand(
-#             "gubbins/{ref}.gubbins.bed",
-#             ref={ref_from_QC(s) for s in filt_samples}
-#         ),
-#         expand(
-#             "MRCA_ref_mapping/{ref}.merge.vcf.gz",
-#             ref={ref_from_QC(s) for s in filt_samples}
-#         ),
-#         expand(
-#             "MRCA_ref_mapping/{ref}.merge.vcf.gz.csi",
-#             ref={ref_from_QC(s) for s in filt_samples}
-#         ),
-#         expand(
-#             "MRCA_ref_mapping/{ref}.merge_gubbins.vcf.gz",
-#             ref={ref_from_QC(s) for s in filt_samples}
-#         ),
-#         expand(
-#             "SNP_phylo/{ref}.merge.fasta",
-#             ref={ref_from_QC(s) for s in filt_samples}
-#         ),
-#         expand(
-#             "SNP_phylo/{ref}.merge.fasta.treefile",
-#             ref={ref_from_QC(s) for s in filt_samples}
-#         )
+
+gubbins_output = []
+gubbins = ['nogubbins']
+# TODO: this needs to be per-reference, ie a reference has to have at least 3
+# isolates assigned to it in order to be eligible for gubbins, otherwise
+# skip gubbins
+if len(filt_samples) >= 3:
+    gubbins_output += expand(
+        "{res}/gubbins/{ref}.gubbins.done",
+        res=res,
+        ref=(ref_from_QC(s, f"{res}/QC_summary.csv")  for s in filt_samples)
+    )
+    gubbins_output += expand(
+        "{res}/gubbins/{ref}.gubbins.bed",
+        res=res,
+        ref=(ref_from_QC(s, f"{res}/QC_summary.csv") for s in filt_samples)
+    )
+    gubbins_output += expand(
+        "{res}/MRCA_ref_mapping/{ref}/merge.gubbins.vcf.gz",
+        res=res,
+        ref=(ref_from_QC(s, f"{res}/QC_summary.csv") for s in filt_samples)
+    ),
+    gubbins += ['gubbins']
 
 
-# ###############################################################################
-# # STAGE 3
-# ###############################################################################
-# # merge all zero-coverage positions for all samples
-# # def glob_0covbed(ref, samples, step):
-# rule merge_0cov_bed:
-#     threads: 1
-#     input:
-#         lambda wildcards: [
-#             "MRCA_ref_mapping/{ref}/{s}.RG_SC_RA.0cov.bed".format(
-#                 ref=ref_from_QC(s), s=s)
-#             for s in filt_samples if
-#             ref_from_QC(s) == wildcards.ref
-#         ]
-#     output:
-#         "MRCA_ref_mapping/{ref}.RG_SC_RA.merge.0cov.bed"
-#     shell:
-#         # the grep command will fail on the input of an empty bed file
-#         # something to do with bash strict mode?
-#         "echo '' | "
-#         "cat - {input} | "
-#         "grep 'NC_010394' -v | sort -k 1,1n -k 2,2n | uniq | "
-#         "bedtools merge -i - > {output}"
-
-# rule merge_DF_bed:
-#     threads: 1
-#     input:
-#         lambda wildcards: [
-#             "MRCA_ref_mapping/{ref}/{s}.RG_SC_RA_filter.hvar_DF.bed".format(
-#                 ref=ref_from_QC(s), s=s)
-#             for s in filt_samples if
-#             ref_from_QC(s) == wildcards.ref
-#         ]
-#     output:
-#         "MRCA_ref_mapping/{ref}.RG_SC_RA.merge.DF.bed"
-#     shell:
-#         "echo '' | cat - {input} | "
-#         "grep 'NC_010394' -v | sort -k 1,1n -k 2,2n | uniq | "
-#         "bedtools merge -i - > {output}"
-
-# rule merge_bed:
-#     threads: 1
-#     input:
-#         zerocov = "MRCA_ref_mapping/{ref}.RG_SC_RA.merge.0cov.bed",
-#         # this is probably covered by gubbins
-#         # DF = "MRCA_ref_mapping/{ref}.RG_SC_RA.merge.DF.bed",
-#         PEPPE = f"{exec_dir}/resources/alignment_references/{{ref}}.PE_PPE.bed"
-#     output:
-#         "MRCA_ref_mapping/{ref}.RG_SC_RA.merge.bed"
-#     shell:
-#         "echo '' | "
-#         "cat - {input} | "
-#         r"grep 'NC_010394\.1' -v | sort -k 1,1n -k 2,2n | cut -f 1-3 | "
-#         "bedtools merge -i - > {output}"
-
-# rule filter_vcf_with_bed:
-#     threads: 1
-#     input:
-#         bed = "MRCA_ref_mapping/{ref}.RG_SC_RA.merge.bed",
-#         vcf = "MRCA_ref_mapping/{ref}/{sample}.RG_SC_RA_filter.hvar.vcf.gz",
-#         csi = "MRCA_ref_mapping/{ref}/{sample}.RG_SC_RA_filter.hvar.vcf.gz.csi"
-#     output:
-#         vcf = "filtered_vcf/{ref}/{sample}.RG_SC_RA_bedfilter.vcf.gz"
-#     shell:
-#         "bcftools view {input.vcf} -T ^{input.bed} -Oz -o {output.vcf} ;"
-
-# rule extract_sample_VCF_SNPs:
-#     threads: 1
-#     params:
-#         execdir = exec_dir
-#     input:
-#         vcf = "filtered_vcf/{ref}/{sample}.RG_SC_RA_bedfilter.vcf.gz",
-#         csi = "filtered_vcf/{ref}/{sample}.RG_SC_RA_bedfilter.vcf.gz.csi"
-#     output:
-#         "filtered_vcf/{ref}/{sample}.RG_SC_RA_bedfilter.consensus.fasta",
-#     shell:
-#         "bcftools consensus -i 'type=\"SNP\"' "
-#         "-f {params.execdir}/resources/alignment_references/"
-#         "{wildcards.ref}.fasta "
-#         " {input.vcf} > {output}; "
-
-# rule reheader_gubbins:
-#     threads: 1
-#     params:
-#         execdir = exec_dir
-#     conda: "conda_envs/phy_plots.yaml"
-#     input:
-#         "filtered_vcf/{ref}/{sample}.RG_SC_RA_bedfilter.consensus.fasta"
-#     output:
-#         "gubbins/{ref}/{sample}.RG_SC_RA_bedfilter_gubbins.fasta"
-#     shell:
-#         "{params.execdir}/scripts/reheader_gubbins.py {input} > {output}"
-
-# rule concatenate_gubbins:
-#     # 10215* 2/1/2021 17:31  cat ./mabscessus/*.fasta > mabs.fasta
-#     threads: 1
-#     conda: "conda_envs/phy_plots.yaml"
-#     params:
-#         execdir = exec_dir
-#     input:
-#         samples = lambda wildcards: [
-#             "gubbins/{ref}/{s}.RG_SC_RA_bedfilter_gubbins.fasta".format(
-#                 ref=ref_from_QC(s), s=s
-#             ) for s in filt_samples if ref_from_QC(s) == wildcards.ref
-#         ],
-#     output:
-#         "gubbins/{ref}.concatenated.fasta"
-#     shell:
-#         "cat {input} > {output} ; {params.execdir}/scripts/gubbins_ref.py "
-#         "{wildcards.ref} >> {output}"
-
-# rule run_gubbins:
-#     # 10218* 2/1/2021 17:31  run_gubbins.py --prefix mabs --min_snps 20 --threads 8 mabs.fasta
-#     conda: "conda_envs/gubbins.yaml"
-#     threads: 8
-#     params:
-#         execdir = exec_dir,
-#         prefix = "gubbins/{ref}.concatenated"
-#     input:
-#         "gubbins/{ref}.concatenated.fasta"
-#     output:
-#         # filtered_fasta = "gubbins/{ref}.concatenated."
-#         # "filtered_polymorphic_sites.fasta",
-#         embl = "gubbins/{ref}.concatenated.recombination_predictions.embl",
-#         sentinel = "gubbins/{ref}.gubbins.done"
-#     shell:
-#         "run_gubbins.py --prefix {params.prefix} --min_snps 20 "
-#         "--threads {threads} {input} || true ; "
-#         "touch {output.sentinel}"
-
-# rule make_gubbins_bed:
-#     # 10239* 2/1/2021 18:06  ../../analysis/make_bed_from_gubbins.py mabs.recombination_predictions.embl | sort -k 1,1n -k 2,2n > mabs.gubbins.bed
-#     threads: 1
-#     conda: "conda_envs/phy_plots.yaml"
-#     params:
-#         execdir = exec_dir
-#     input:
-#         # sentinel implies this exists
-#         embl = "gubbins/{ref}.concatenated.recombination_predictions.embl",
-#         sentinel = "gubbins/{ref}.gubbins.done"
-#     output:
-#         "gubbins/{ref}.gubbins.bed"
-#     shell:
-#         "{params.execdir}/scripts/make_bed_from_gubbins.py {input.embl} "
-#         "{params.execdir}/resources/alignment_references/{wildcards.ref}.fasta "
-#         "{input.sentinel} > {output}"
-
-# rule merge_vcf:
-#     threads: 8
-#     input:
-#         vcfs = lambda wildcards: [
-#             "MRCA_ref_mapping/{ref}/{s}.RG_SC_RA_filter.hvar.vcf.gz".format(
-#                 ref=ref_from_QC(s), s=s
-#             ) for s in filt_samples if ref_from_QC(s) == wildcards.ref
-#         ],
-#         indices = lambda wildcards: [
-#             "MRCA_ref_mapping/{ref}/{s}.RG_SC_RA_filter.hvar.vcf.gz.csi".format(
-#                 ref=ref_from_QC(s), s=s
-#             ) for s in filt_samples if ref_from_QC(s) == wildcards.ref
-#         ],
-
-#     output:
-#         "MRCA_ref_mapping/{ref}.merge.vcf.gz"
-#     shell:
-#         "bcftools merge -0 --threads {threads} {input.vcfs} -Oz -o {output} "
-
-# rule filter_merged_vcf:
-#     threads: 1
-#     input:
-#         vcf = "MRCA_ref_mapping/{ref}.merge.vcf.gz",
-#         merge_bed = "MRCA_ref_mapping/{ref}.RG_SC_RA.merge.bed",
-#         gubbins_bed =  "gubbins/{ref}.gubbins.bed",
-#     output:
-#         "MRCA_ref_mapping/{ref}.merge_gubbins.vcf.gz"
-#     shell:
-#         "bcftools view {input.vcf} -T ^{input.merge_bed} -Ov | "
-#         "bcftools view - -T ^{input.gubbins_bed} -Oz -o {output}"
-
-# rule make_SNP_alignment:
-#     threads: 1
-#     params:
-#         execdir = exec_dir
-#     input:
-#         "MRCA_ref_mapping/{ref}.merge_gubbins.vcf.gz"
-#     output:
-#         "SNP_phylo/{ref}.merge.fasta",
-#     shell:
-#         "{params.execdir}/scripts/make_SNP_alignment.py {input} > {output}"
-
-
-# def snpEff_db(ref):
-#     if ref == 'mabscessus':
-#         return "Mycobacterium_abscessus_atcc_19977"
-#     elif ref == 'mmassiliense':
-#         return "Mycobacterium_abscessus_subsp_bolletii_ccug_48898_jcm_15300_" \
-#             "gca_000497265"
-#     elif ref == 'mbolettii':
-#         return "Mycobacterium_abscessus_subsp_bolletii_bd"
-
-
-# rule snpEff_annotation:
-#     conda:
-#         "conda_envs/snpeff.yaml"
-#     threads: 1
-#     input:
-#         "MRCA_ref_mapping/{ref}.{step}.merge.vcf.gz"
-#     params:
-#         db = lambda wildcards: snpEff_db(wildcards.ref)
-#     output:
-#         "MRCA_ref_mapping/{ref}.{step}.merge.snpeff.vcf"
-#     shell:
-#         "snpEff {params.db} {input} > {output}"
-
-
-# rule MRCA_SNPs_phylogeny:
-#     conda: "conda_envs/iqtree.yaml"
-#     threads: 8
-#     input:
-#         "SNP_phylo/{ref}.merge.fasta"
-#     output:
-#         tree = "SNP_phylo/{ref}.merge.fasta.treefile"
-#     shell:
-#         "iqtree -s {input} -nt {threads} -m MFP -B 10000 -redo"
+rule stage3:
+    input:
+        f"{res}/QC_summary.csv",
+        expand(
+            "{res}/MRCA_ref_mapping/{ref}/RG_SC_RA.merge.0cov.bed",
+            res=res,
+            ref=(ref_from_QC(s, f"{res}/QC_summary.csv") for s in filt_samples),
+        ),
+        expand(
+            "{res}/MRCA_ref_mapping/{ref}/RG_SC_RA.merge.DF.bed",
+            res=res,
+            ref=(ref_from_QC(s, f"{res}/QC_summary.csv") for s in filt_samples),
+        ),
+        expand(
+            "{res}/MRCA_ref_mapping/{ref}/RG_SC_RA.merge.bed",
+            res=res,
+            ref=(ref_from_QC(s, f"{res}/QC_summary.csv") for s in filt_samples),
+        ),
+        [
+            "{res}/{sample}/filtered_vcf/{ref}/RG_SC_RA_bedfilter.vcf.gz".format(
+                res=res,
+                ref=ref_from_QC(s, f"{res}/QC_summary.csv"), sample=s
+            ) for s in filt_samples
+        ],
+        [
+            "{res}/{sample}/filtered_vcf/{ref}/RG_SC_RA_bedfilter"
+            ".consensus.fasta".format(
+                res=res,
+                ref=ref_from_QC(s, f"{res}/QC_summary.csv"), sample=s
+            ) for s in filt_samples
+        ],
+        # [
+        #     "{res}/{sample}/gubbins/{ref}/RG_SC_RA_bedfilter.gubbins.fasta".format(
+        #         res=res,
+        #         ref=ref_from_QC(s, f"{res}/QC_summary.csv"), sample=s
+        #     ) for s in filt_samples
+        # ],
+        expand(
+            "{res}/gubbins/{ref}.concatenated.fasta",
+            res=res,
+            ref=(ref_from_QC(s, f"{res}/QC_summary.csv") for s in filt_samples)
+        ),
+        gubbins_output,
+        expand(
+            "{res}/MRCA_ref_mapping/{ref}/merge.{gubbins}.vcf.gz",
+            res=res, gubbins=['nogubbins', 'gubbins'],
+            ref=(ref_from_QC(s, f"{res}/QC_summary.csv") for s in filt_samples)
+        ),
+        expand(
+            "{res}/MRCA_ref_mapping/{ref}/merge.{gubbins}.vcf.gz.csi",
+            res=res, gubbins=['nogubbins', 'gubbins'],
+            ref=(ref_from_QC(s, f"{res}/QC_summary.csv") for s in filt_samples)
+        ),
+        expand(
+            "{res}/SNP_phylo/{ref}.merge.{gubbins}.fasta",
+            res=res, gubbins=['nogubbins', 'gubbins'],
+            ref=(ref_from_QC(s, f"{res}/QC_summary.csv") for s in filt_samples)
+        ),
+        expand(
+            "{res}/SNP_phylo/{ref}.merge.{gubbins}.fasta.treefile",
+            res=res, gubbins=['nogubbins', 'gubbins'],
+            ref=(ref_from_QC(s, f"{res}/QC_summary.csv") for s in filt_samples)
+        ),
+        expand(
+            "{res}/SNP_phylo/{ref}.merge.{gubbins}.fasta.snpdists.csv",
+            res=res, gubbins=['gubbins', 'nogubbins'],
+            ref=(ref_from_QC(s, f"{res}/QC_summary.csv") for s in filt_samples)
+        ),
