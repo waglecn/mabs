@@ -27,6 +27,7 @@ conda activate mabs
 - GATK3 jar file
 	- available from <https://console.cloud.google.com/storage/browser/gatk-software/package-archive/gatk>
 	- used '''GenomeAnalysisTK-3.8-1-0-gf15c1c3ef.tar.bz2'''
+	- https://storage.cloud.google.com/gatk-software/package-archive/gatk/GenomeAnalysisTK-3.8-1-0-gf15c1c3ef.tar.bz2
 	- see config.yaml
 - adapters for trimming - see config.yaml
 	- look for adapter files bundled with trimmomatic, ie.

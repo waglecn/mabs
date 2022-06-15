@@ -322,7 +322,7 @@ rule map_to_mabs:
         R1 = f"{res}/{{sample}}/input/R1.trim.fastq.gz",
         R2 = f"{res}/{{sample}}/input/R2.trim.fastq.gz",
         S1 = f"{res}/{{sample}}/input/S1.trim.fastq.gz",
-        idx = f"workflow/resources/alignment_references/mabscessus.amb"
+        idx = f"workflow/resources/alignment_references/mabscessus.fasta.amb"
     params:
         execdir = exec_dir
     output:
@@ -335,11 +335,11 @@ rule map_to_mabs:
         merge_sorted_bai = f"{res}/{{sample}}/ref_mapping/mabs/merged.sorted.bam.bai"
     shell:
         "bwa-mem2 mem -t {threads} -M "
-        "workflow/resources/alignment_references/mabscessus "
+        "workflow/resources/alignment_references/mabscessus.fasta "
         "{input.R1} {input.R2} | samtools view -Sbh - | samtools sort - > "
         "{output.paired_temp} ;"
         "bwa-mem2 mem -t {threads} -M "
-        "workflow/resources/alignment_references/mabscessus "
+        "workflow/resources/alignment_references/mabscessus.fasta "
         "{input.S1} | samtools view -Sbh - | samtools sort -@ {threads} - > "
         "{output.single_temp} ;"
         "samtools index {output.paired_temp} ;"
@@ -476,8 +476,8 @@ rule QC_stats_per_sample:
 
 rule merge_QC_summary:
     priority: 10
-    conda:
-        "envs/phy_plots.yaml"
+    # conda:
+    #     "envs/phy_plots.yaml"
     threads: 1
     input:
         expand(

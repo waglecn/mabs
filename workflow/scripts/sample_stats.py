@@ -555,14 +555,14 @@ def mapping(sample, stats):
 
 def MRCA(sample, stats):
     results_dir = stats['results_dir']
-    stats['MRCA'] = 'N/A'
+    stats['MRCA_ref'] = 'N/A'
 
     base = Path(f'./{results_dir}/{sample}')
 
     inf = base / f'{sample}.MRCA.csv'
     try:
         data = [l.strip().split(',') for l in open(inf, 'r')]
-        stats['MRCA'] = data[0]
+        stats['MRCA_ref'] = data[0]
     except Exception:
         print("Problem opening file: {}".format(inf), file=sys.stderr)
         return stats

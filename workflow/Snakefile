@@ -66,7 +66,7 @@ include: "stage0.smk"
 # Illumina-QC pipeline
 include: "stage1.smk"
 # # variant calling
-# include: "stage2.smk"
+include: "stage2.smk"
 # # variant counting
 # include: "SNP_counts.smk"
 
@@ -178,57 +178,58 @@ rule stage2:
         ##################################
         [
             "{res}/{sample}/MRCA_ref_mapping/{ref}/RG_SC_RA.intervals".format(
-                 res=res, ref=ref_from_QC(s),
+                 res=res, ref=ref_from_QC(s, f"{res}/QC_summary.csv"),
                 sample=s
             ) for s in filt_samples
         ],
         [
             "{res}/{sample}/MRCA_ref_mapping/{ref}/RG_SC_RA.bam".format(
-                res=res, ref=ref_from_QC(s),
+                res=res, ref=ref_from_QC(s, f"{res}/QC_summary.csv"),
                 sample=s,
             ) for s in filt_samples
         ],
         [
             "{res}/{sample}/MRCA_ref_mapping/{ref}/RG_SC_RA.mpileup".format(
-                res=res, ref=ref_from_QC(s),
+                res=res, ref=ref_from_QC(s, f"{res}/QC_summary.csv"),
                 sample=s
             ) for s in filt_samples
         ],
         [
-            "{res}/{sample}/MRCA_ref_mapping/{ref}/"
-            "RG_SC_RA_filter.vcf.gz".format(
-                res=res, ref=ref_from_QC(s),
-                sample=s 
-            )  for s in filt_samples
+            "{res}/{sample}/MRCA_ref_mapping/{ref}/RG_SC_RA_filter.vcf.gz".format(
+                res=res, ref=ref_from_QC(s, f"{res}/QC_summary.csv"),
+                sample=s
+            ) for s in filt_samples
         ],
-        # [
-        #     "MRCA_ref_mapping/{ref}/{sample}.RG_SC_RA_filter"
-        #     ".failed.vcf.gz".format(
-        #         ref=ref_from_QC(s), sample=s
-        #     ) for s in filt_samples
-        # ],
-        # [
-        #     "MRCA_ref_mapping/{ref}/{sample}.RG_SC_RA_filter"
-        #     ".AD_failed.vcf.gz".format(
-        #         ref=ref_from_QC(s), sample=s
-        #     ) for s in filt_samples
-        # ],
-        # [
-        #     "MRCA_ref_mapping/{ref}/{sample}.RG_SC_RA_filter.hvar"
-        #     ".vcf.gz".format(
-        #         ref=ref_from_QC(s), sample=s
-        #     ) for s in filt_samples
-        # ],
-        # [
-        #     "MRCA_ref_mapping/{ref}/{sample}.RG_SC_RA.0cov.bed".format(
-        #         ref=ref_from_QC(s), sample=s
-        #     ) for s in filt_samples
-        # ],
-        # [
-        #     "MRCA_ref_mapping/{ref}/{sample}.RG_SC_RA_filter.hvar_DF.bed".format(
-        #         ref=ref_from_QC(s), sample=s
-        #     ) for s in filt_samples
-        # ],
+        [
+            "{res}/{sample}/MRCA_ref_mapping/{ref}/RG_SC_RA_filter.failed.vcf.gz".format(
+                res=res, ref=ref_from_QC(s, f"{res}/QC_summary.csv"),
+                sample=s
+            ) for s in filt_samples
+        ],
+        [
+            "{res}/{sample}/MRCA_ref_mapping/{ref}/RG_SC_RA_filter.AD_failed.vcf.gz".format(
+                res=res, ref=ref_from_QC(s, f"{res}/QC_summary.csv"),
+                sample=s
+            ) for s in filt_samples
+        ],
+        [
+            "{res}/{sample}/MRCA_ref_mapping/{ref}/RG_SC_RA_filter.hvar.vcf.gz".format(
+                res=res, ref=ref_from_QC(s, f"{res}/QC_summary.csv"),
+                sample=s
+            ) for s in filt_samples
+        ],
+        [
+            "{res}/{sample}/MRCA_ref_mapping/{ref}/RG_SC_RA.0cov.bed".format(
+                res=res, ref=ref_from_QC(s, f"{res}/QC_summary.csv"),
+                sample=s
+            ) for s in filt_samples
+        ],
+        [
+            "{res}/{sample}/MRCA_ref_mapping/{ref}/RG_SC_RA_filter.hvar_DF.bed".format(
+                res=res, ref=ref_from_QC(s, f"{res}/QC_summary.csv"),
+                sample=s
+            ) for s in filt_samples
+        ],
 
 # rule stage3:
 #     input:
@@ -292,50 +293,6 @@ rule stage2:
 #             "SNP_phylo/{ref}.merge.fasta.treefile",
 #             ref={ref_from_QC(s) for s in filt_samples}
 #         )
-
-
-
-# ######################################################################
-# #
-# # Utility RULES
-# #
-# ######################################################################
-# rule index_bam:
-#     threads: 1
-#     input:
-#         "{inbam}.bam"
-#     output:
-#         "{inbam}.bam.bai"
-#     shell:
-#         "samtools index {input} "
-
-# rule index_vcf:
-#     threads: 1
-#     input:
-#         "{invcf}.vcf.gz"
-#     output:
-#         "{invcf}.vcf.gz.csi"
-#     shell:
-#         "htsfile {input} ;"
-#         "bcftools index {input}"
-
-# rule create_fasta_dict_index:
-#     threads: 1
-#     params:
-#         execdir = exec_dir
-#     conda: "conda_envs/picard.yaml"
-#     input:
-#         f"{exec_dir}/resources/alignment_references/{{ref}}.fasta"
-#     output:
-#         seqdict = f"{exec_dir}/resources/alignment_references/{{ref}}.dict",
-#         fai = f"{exec_dir}/resources/alignment_references/{{ref}}.fasta.fai"
-#     shell:
-#         "picard CreateSequenceDictionary -R {input} -O {output.seqdict} && "
-#         "samtools faidx {input} -o {output.fai}"
-
-
-
-
 
 
 # ###############################################################################

@@ -34,3 +34,45 @@ def get_samples():
         except yaml.YAMLError as exc:
             print(exc)
         return samplesheet
+
+######################################################################
+#
+# Utility RULES
+#
+######################################################################
+
+rule index_bam:
+    threads: 1
+    conda:
+        "envs/bwa.yaml"
+    input:
+        "{inbam}.bam"
+    output:
+        "{inbam}.bam.bai"
+    shell:
+        "samtools index {input} "
+
+rule index_vcf:
+    threads: 1
+    conda:
+        "envs/bwa.yaml"
+    input:
+        "{invcf}.vcf.gz"
+    output:
+        "{invcf}.vcf.gz.csi"
+    shell:
+        "htsfile {input} ;"
+        "bcftools index {input}"
+
+rule create_fasta_dict_index:
+    threads: 1
+    conda:
+        "envs/picard.yaml"
+    input:
+        "workflow/resources/alignment_references/{ref}.fasta"
+    output:
+        seqdict = "workflow/resources/alignment_references/{ref}.dict",
+        fai = "workflow/resources/alignment_references/{ref}.fasta.fai"
+    shell:
+        "picard CreateSequenceDictionary -R {input} -O {output.seqdict} && "
+        "samtools faidx {input} -o {output.fai}"

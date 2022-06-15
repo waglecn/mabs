@@ -6,31 +6,32 @@
 rule temp_MRCA_ref_alignment:
     priority: 10
     threads: 8
-    params:
-        execdir = exec_dir
+    conda:
+        "envs/bwa.yaml"
     input:
-        QC = 'QC_summary.csv',
-        tR1 = f"{res}/{{sample}}/input/R1.trim.fastq.gz",
-        tR2 = f"{res}/{{sample}}/input/R2.trim.fastq.gz",
-        tS1 = f"{res}/{{sample}}/input/S1.trim.fastq.gz",
+        QC = f"{res}/QC_summary.csv",
+        R1 = f"{res}/{{sample}}/input/R1.trim.fastq.gz",
+        R2 = f"{res}/{{sample}}/input/R2.trim.fastq.gz",
+        S1 = f"{res}/{{sample}}/input/S1.trim.fastq.gz",
+        idx = "workflow/resources/alignment_references/{ref}.fasta.amb"
     output:
         paired_temp = temp(
-            f"{res}/MRCA_ref_mapping/{{ref}}/paired.sorted.bam"
+            f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/paired.sorted.bam"
         ),
         single_temp = temp(
-            f"{res}/MRCA_ref_mapping/{{ref}}/single.sorted.bam"
+            f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/single.sorted.bam"
         ),
-        merge_temp = temp(f"{res}/MRCA_ref_mapping/{{ref}}/merge.bam"),
+        merge_temp = temp(f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/merge.bam"),
         merge_sorted = temp(
-            f"{res}/MRCA_ref_mapping/{{ref}}/temp.merged.sorted.bam"
+            f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/temp.merged.sorted.bam"
         ),
     shell:
-        "bwa mem -t {threads} -M "
-        "{params.execdir}/resources/alignment_references/{wildcards.ref} "
+        "bwa-mem2 mem -t {threads} -M "
+        "workflow/resources/alignment_references/{wildcards.ref}.fasta "
         "{input.R1} {input.R2} | samtools view -Sbh - | samtools sort > "
         "{output.paired_temp} ;"
-        "bwa mem -t {threads} -M "
-        "{params.execdir}/resources/alignment_references/{wildcards.ref} "
+        "bwa-mem2 mem -t {threads} -M "
+        "workflow/resources/alignment_references/{wildcards.ref}.fasta "
         "{input.S1} | samtools view -Sbh - | samtools sort -@ {threads} > "
         "{output.single_temp} ;"
         "samtools index {output.paired_temp} ;"
@@ -42,14 +43,15 @@ rule temp_MRCA_ref_alignment:
 
 rule temp_add_read_groups:
     threads: 1
-    conda: "conda_envs/picard.yaml"
+    conda:
+        "envs/picard.yaml"
     input:
-        bam = f"{res}/MRCA_ref_mapping/{{ref}}/temp.merged.sorted.bam",
-        bai = f"{res}/MRCA_ref_mapping/{{ref}}/temp.merged.sorted.bam.bai"
+        bam = f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/temp.merged.sorted.bam",
+        bai = f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/temp.merged.sorted.bam.bai"
     output:
-        temp(f"{res}/MRCA_ref_mapping/{{ref}}/tempRG.merged.sorted.bam")
+        temp(f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/tempRG.merged.sorted.bam")
     log:
-        f"{res}/MRCA_ref_mapping/{{ref}}/picard.RG.log"
+        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/picard.RG.log"
     shell:
         "picard AddOrReplaceReadGroups -INPUT {input.bam} "
         "-OUTPUT {output} -SORT_ORDER coordinate -RGID {wildcards.sample} "
@@ -58,12 +60,12 @@ rule temp_add_read_groups:
         " 2>&1 | tee {log}"
 
 rule MRCA_ref_softclip_filter:
-    conda: "envs/mapping.yaml"
+    conda: "envs/bwa.yaml"
     threads: 1
     input:
-        f"{res}/MRCA_ref_mapping/{{ref}}/tempRG.merged.sorted.bam"
+        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/tempRG.merged.sorted.bam"
     output:
-        temp(f"{res}/MRCA_ref_mapping/{{ref}}/tempRGSC.merged.sorted.bam"),
+        temp(f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/tempRGSC.merged.sorted.bam"),
     shell:
         "workflow/scripts/sclips.py filter {input} > {output} "
 
@@ -71,17 +73,17 @@ rule MRCA_ref_softclip_filter:
 rule MRCA_ref_gatk_realignment_intervals:
     threads: 1
     conda:
-        "conda_envs/gatk3.yaml"
+        "envs/gatk3.yaml"
     input:
-        bam = f"{res}/MRCA_ref_mapping/{{ref}}/tempRGSC.merged.sorted.bam",
-        bai = f"{res}/MRCA_ref_mapping/{{ref}}/tempRGSC.merged.sorted.bam.bai",
+        bam = f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/tempRGSC.merged.sorted.bam",
+        bai = f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/tempRGSC.merged.sorted.bam.bai",
         seqdict = "workflow/resources/alignment_references/{ref}.dict",
         fai = "workflow/resources/alignment_references/{ref}.fasta.fai",
-        gatk = "workflow/resources/gatk-registered"
+        # gatk = "workflow/resources/gatk-registered"
     output:
-        f"{res}/MRCA_ref_mapping/{{ref}}/RG_SC_RA.intervals"
+        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/RG_SC_RA.intervals"
     log:
-        f"{res}/MRCA_ref_mapping/{{ref}}/gatk3_intervals.log"
+        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/gatk3_intervals.log"
     shell:
         "gatk3 -nt 1 -T RealignerTargetCreator -R "
         "workflow/resources/alignment_references/"
@@ -91,15 +93,15 @@ rule MRCA_ref_gatk_realignment_intervals:
 rule MRCA_ref_gatk_realignment:
     threads: 1
     conda:
-        "conda_envs/gatk3.yaml"
+        "envs/gatk3.yaml"
     input:
-        bam = f"{res}/MRCA_ref_mapping/{{ref}}/tempRGSC.merged.sorted.bam",
-        bai = f"{res}/MRCA_ref_mapping/{{ref}}/tempRGSC.merged.sorted.bam.bai",
-        intervals = f"{res}/MRCA_ref_mapping/{{ref}}/RG_SC_RA.intervals",
+        bam = f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/tempRGSC.merged.sorted.bam",
+        bai = f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/tempRGSC.merged.sorted.bam.bai",
+        intervals = f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/RG_SC_RA.intervals",
     output:
-        f"{res}/MRCA_ref_mapping/{{ref}}/RG_SC_RA.bam"
+        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/RG_SC_RA.bam"
     log:
-        f"{res}/MRCA_ref_mapping/{{ref}}/gatk_realign.log"
+        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/gatk_realign.log"
     shell:
         "gatk3 -nt 1 -rf OverclippedRead "
         # "--filter_is_too_short_value 100 -minRead 100 "
@@ -112,14 +114,14 @@ rule MRCA_ref_gatk_realignment:
 
 rule MRCA_make_mpileup:
     threads: 1
-    params:
-        execdir = exec_dir
+    conda:
+        "envs/bwa.yaml"    
     input:
         # "MRCA_ref_mapping/{ref}/{sample}.RG_SC_RA.bam"
-        "MRCA_ref_mapping/{ref}/{sample}.RG_SC_RA.bam"
+        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/RG_SC_RA.bam"
     output:
         # "MRCA_ref_mapping/{ref}/{sample}.RG_SC_RA_mq30_baq.mpileup"
-        "MRCA_ref_mapping/{ref}/{sample}.RG_SC_RA.mpileup"
+        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/RG_SC_RA.mpileup"
     shell:
         # note that mpileup has moved to bcftools
         # -d max depth
@@ -128,17 +130,19 @@ rule MRCA_make_mpileup:
         # -u in samtools 1.7 -> -O v uncompressed VCF output
         # -g in samtools 1.7 -> bcftools includes genotype likelihoods default
         "bcftools mpileup -d 1000 -q 30 -a DP,AD,ADF,ADR,SP -Oz "
-        "-f {params.execdir}/resources/alignment_references/"
+        "-f workflow/resources/alignment_references/"
         "{wildcards.ref}.fasta "
         "{input} -o {output}"
 
 
 rule MRCA_call_and_filter_variants:
     threads: 1
+    conda:
+        "envs/bwa.yaml"
     input:
-        "MRCA_ref_mapping/{ref}/{sample}.{step}.mpileup"
+        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step}}.mpileup"
     output:
-        "MRCA_ref_mapping/{ref}/{sample}.{step}_filter.vcf.gz"
+        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step}}_filter.vcf.gz"
     shell:
         # -Ov output uncompressed vcf
         # -m multiallelic caller
@@ -146,12 +150,12 @@ rule MRCA_call_and_filter_variants:
         "bcftools call -Ov -m -v {input} | "
         # filtering
         # MQ mapping quality
-        # ID-SP - Phred strand bias p-value
-        # ID-ADF[1] - allelic depth forward strand of first alt allele
+        # ID-SP - Phred-scaled strand bias p-value
+        # ID-ADF[1] - alleleic depth forward strand of first alt allele
         # ID-ADR[1] - alleleic depth reverse strand of first alt allele
-        # QUAL - Phred scaled ALT quality
+        # QUAL - Phred-scaled ALT quality
         # FORMAT-DP - number of high-quality bases
-        # FORMAT-SP - Phred strand bias p-value
+        # FORMAT-SP - Phred-scaled strand bias p-value
         # FORMAT-ADF and ADR as in INFO
         # Note need to specify sample 0:
         # see https://github.com/samtools/bcftools/issues/757
@@ -161,10 +165,12 @@ rule MRCA_call_and_filter_variants:
 
 rule MRCA_inverse_filter:
     threads: 1
+    conda:
+        "envs/bwa.yaml"
     input:
-        "MRCA_ref_mapping/{ref}/{sample}.{step}.mpileup"
+        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step}}.mpileup"
     output:
-        "MRCA_ref_mapping/{ref}/{sample}.{step}_filter.failed.vcf.gz"
+        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step}}_filter.failed.vcf.gz"
     shell:
         "bcftools call -Oz -m -v {input} | "
         "bcftools filter -i 'SP>=45 || MQ<=30 || FORMAT/DP<=10 || QUAL<=50' "
@@ -172,10 +178,12 @@ rule MRCA_inverse_filter:
 
 rule MRCA_inverse_AD_filter:
     threads: 1
+    conda:
+        "envs/bwa.yaml"
     input:
-        "MRCA_ref_mapping/{ref}/{sample}.{step}.mpileup"
+        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step}}.mpileup"
     output:
-        "MRCA_ref_mapping/{ref}/{sample}.{step}_filter.AD_failed.vcf.gz"
+        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step}}_filter.AD_failed.vcf.gz"
     params:
         snp_cutoff = 0.90
     shell:
@@ -186,12 +194,14 @@ rule MRCA_inverse_AD_filter:
 # density rule to filter out snps
 rule filter_hsnps:
     threads: 1
+    conda:
+        "envs/bwa.yaml"
     params:
         snp_cutoff = 0.90
     input:
-        "MRCA_ref_mapping/{ref}/{sample}.{step}_filter.vcf.gz"
+        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step}}_filter.vcf.gz"
     output:
-        "MRCA_ref_mapping/{ref}/{sample}.{step}_filter.hvar.vcf.gz"
+        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step}}_filter.hvar.vcf.gz"
     shell:
         "bcftools filter -i '(AD[0:1]/(AD[0:0]+AD[0:1]) > "
         "{params.snp_cutoff})' -Oz -o {output} {input} "
@@ -199,35 +209,35 @@ rule filter_hsnps:
 # make per-sample beds for merged filtering
 rule make_bed_0cov:
     threads: 1
+    conda:
+        "envs/bwa.yaml"
     input:
-        "MRCA_ref_mapping/{ref}/{sample}.{step}.bam"
+        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step}}.bam"
     output:
-        "MRCA_ref_mapping/{ref}/{sample}.{step}.0cov.bed"
+        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step}}.0cov.bed"
     shell:
         "bedtools genomecov -ibam {input} -bga | awk '$4==0' > {output}"
 
 rule density_filter_bed:
     threads: 1
-    params:
-        execdir = exec_dir
+    conda:
+        "envs/bwa.yaml"
     input:
-        "MRCA_ref_mapping/{ref}/{sample}.{step}.vcf.gz"
+        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step}}.vcf.gz"
     output:
-        bed = "MRCA_ref_mapping/{ref}/{sample}.{step}_DF.bed"
+        bed = f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step}}_DF.bed"
     shell:
-        "{params.execdir}/scripts/make_vcf_density_bed.py {input} > "
+        "workflow/scripts/make_vcf_density_bed.py {input} > "
         "{output.bed}"
 
 # make ref BED for PE  PPE genes
 rule make_PE_PPE_BED:
     threads: 1
-    params:
-        execdir = exec_dir
     conda:
-        "conda_envs/phy_plots.yaml"
+        "envs/phy_plots.yaml"
     input:
-        f"{exec_dir}/resources/alignment_references/{{ref}}.gbk"
+        "workflow/resources/alignment_references/{{ref}}.gbk"
     output:
-        "{params.execdir}/resources/alignment_references/{ref}.PE_PPE.bed"
+        "workflow/resources/alignment_references/{ref}.PE_PPE.bed"
     shell:
-        "{params.execdir}/scripts/make_PE_PPE_BED.py {input} > {output}"
+        "workflow/scripts/make_PE_PPE_BED.py {input} > {output}"

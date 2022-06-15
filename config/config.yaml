@@ -2,6 +2,7 @@
 target_species_taxid: 670516
 # copy into resources directory - provide your own, due to license
 gatk3_jar: "GenomeAnalysisTK.jar"
+gatk3_jar_url: "https://storage.cloud.google.com/gatk-software/package-archive/gatk/GenomeAnalysisTK-3.8-1-0-gf15c1c3ef.tar.bz2"
 # base location of internal sample read data
 data_dir: "/media/nick/8TB/SGL_MA/"
 # Replace this with the sample sheet for your own samples, see provided example
@@ -13,7 +14,7 @@ adapters_fasta: "workflow/resources/TruSeq3-PE.fa"
 # minimum length of read to keep - see Martin et al 2018, referenced in Lee et al 2020
 QC_min_length: 36
 # a directory, downloaded from kraken2 ftp - see Required Files in readme.md
-kraken_db: "/media/nick/2TB/backup-ignore/MA/minikraken2_v2_8GB_201904_UPDATE/"
+kraken_db: "/media/nick/hex/2TB/backup-ignore/MA/minikraken2_v2_8GB_201904_UPDATE/"
 # This is on a fast SSD, shovill faster
 shovill_tempdir: "/home/nick/Downloads/tmp"
 # set the amount of mem per assembly for shovill in GB

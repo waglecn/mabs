@@ -122,14 +122,26 @@ def aggregate_refseq(wildcards):
     assembly_files = assembly_name + outgroup_name + landmark_name
     return assembly_files
 
+rule get_gatk_jar:
+    conda:
+        "envs/bzip2.yaml"
+    params:
+        jar = config['gatk3_jar'],
+        url = config['gatk3_jar_url']
+    output:
+        "workflow/resources/{params.jar}"
+    shell:
+        "wget {params.url} -P workflow/resources/ ; "
+        "bunzip2 -c workflow/resources/GenomeAnalysisTK-*.tar.bz2 > {output}"
+
 
 rule register_gatk:
     conda: "envs/gatk3.yaml"
-    output: os.path.join(exec_dir, 'workflow/resources/gatk-registered')
+    output:
+        "workflow/resources/gatk-registered"
     params:
         gatk_jar = "workflow/resources/{gatk_jar}".format(
             gatk_jar=config['gatk3_jar'],
-            execdir=exec_dir
         )
     shell:
         "echo {output} ; gatk3-register {params.gatk_jar} ; touch {output}"
@@ -137,7 +149,7 @@ rule register_gatk:
 
 rule prep_references:
     input:
-        expand("workflow/resources/alignment_references/{ref}", ref=[
+        expand("workflow/resources/alignment_references/{ref}.fasta", ref=[
             'mabscessus', 'mmassiliense', 'mbolletii'
         ])
 
@@ -149,21 +161,21 @@ rule get_alignment_references:
     params:
         acc = lambda wildcards: config['mash_ref_taxa'][wildcards.ref]
     output:
-        "workflow/resources/alignment_references/{ref,\w+}"
+        "workflow/resources/alignment_references/{ref,\w+}.fasta"
     shell:
         "ngd -s refseq -r3 --flat-output -A {params.acc} -F fasta "
         "-o workflow/resources/alignment_references bacteria ; "
         "gunzip -c workflow/resources/alignment_references/{params.acc}*.gz > "
-        "workflow/resources/alignment_references/{wildcards.ref} "
+        "{output} "
 
-rule make_mapping_index:
+rule make_mapping_bwa_index:
     conda:
         "envs/bwa.yaml"
     threads: 1
     input:
-        "workflow/resources/alignment_references/{ref}"
+        "workflow/resources/alignment_references/{ref}.fasta"
     output:
-        "workflow/resources/alignment_references/{ref}.amb"
+        "workflow/resources/alignment_references/{ref}.fasta.amb"
     shell:
         "bwa-mem2 index {input}"
 
