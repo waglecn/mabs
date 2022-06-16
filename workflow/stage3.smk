@@ -107,7 +107,7 @@ rule concatenate_gubbins:
     threads: 1
     input:
         samples = lambda wildcards: [
-            "{res}/{s}/gubbins/{ref}/RG_SC_RA_bedfilter.gubbins.fasta".format(
+            "{res}/{s}/gubbins/{ref}/RG_SC_RA_bedfilter_gubbins.fasta".format(
                 res=res,ref=ref_from_QC(s, f"{res}/QC_summary.csv"), s=s
             ) for s in filt_samples if
             ref_from_QC(s, f"{res}/QC_summary.csv") == wildcards.ref
