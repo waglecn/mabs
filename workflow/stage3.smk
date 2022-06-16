@@ -207,7 +207,7 @@ rule make_SNP_alignment:
         "envs/bwa.yaml"
     threads: 1
     input:
-        f"{res}/MRCA_ref_mapping/{{ref}}/merge.{{gubbins,\w+}}.vcf.gz"
+        f"{res}/MRCA_ref_mapping/{{ref}}/merge.{{gubbins}}.vcf.gz"
     output:
         f"{res}/SNP_phylo/{{ref}}.merge.{{gubbins,\w+}}.fasta",
     shell:
@@ -229,11 +229,11 @@ rule snpEff_annotation:
         "envs/snpeff.yaml"
     threads: 1
     input:
-        f"{res}/MRCA_ref_mapping/{{ref}}/{{step}}.merge.{{gubbins,\w+}}.vcf.gz"
+        f"{res}/MRCA_ref_mapping/{{ref}}/merge.{{gubbins}}.vcf.gz"
     params:
         db = lambda wildcards: snpEff_db(wildcards.ref)
     output:
-        f"{res}/MRCA_ref_mapping/{{ref}}/{{step}}.merge.{{gubbins,\w+}}.snpeff.vcf"
+        f"{res}/MRCA_ref_mapping/{{ref}}/merge.{{gubbins,\w+}}.snpeff.vcf"
     shell:
         "snpEff {params.db} {input} > {output}"
 
@@ -243,7 +243,7 @@ rule MRCA_SNPs_phylogeny:
         "envs/iqtree.yaml"
     threads: 8
     input:
-        f"{res}/SNP_phylo/{{ref}}.merge.{{gubbins,\w+}}.fasta"
+        f"{res}/SNP_phylo/{{ref}}.merge.{{gubbins}}.fasta"
     output:
         tree = f"{res}/SNP_phylo/{{ref}}.merge.{{gubbins,\w+}}.fasta.treefile"
     shell:

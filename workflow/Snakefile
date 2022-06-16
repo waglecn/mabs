@@ -330,3 +330,8 @@ rule stage3:
             res=res, gubbins=['gubbins', 'nogubbins'],
             ref=(ref_from_QC(s, f"{res}/QC_summary.csv") for s in filt_samples)
         ),
+        expand(
+            "{res}/MRCA_ref_mapping/{ref}/merge.{gubbins}.snpeff.vcf",
+            res=res, gubbins=['gubbins', 'nogubbins'],
+            ref=(ref_from_QC(s, f"{res}/QC_summary.csv") for s in filt_samples)
+        ),
