@@ -334,19 +334,19 @@ def post_trim_QC(sample, stats):
 
 def fastqc_long_QC(sample, stats):
     results_dir = stats['results_dir']
-    base = Path(f'./{results_dir}/{sample}')
 
     stats['long_QC_num_reads'] = 'N/A'
     stats['long_QC_mean_length'] = 'N/A'
     stats['long_QC_mean_qual'] = 'N/A'
     stats['long_QC_num_bases'] = 'N/A'
 
-    inf = base / 'input' / 'long_fastqc.data.txt'
 
     try:
+        base = Path(f'./{results_dir}/{sample}')
+        inf = base / 'input' / 'long_fastqc.data.txt'
         num, MQ, total_bases, Mlen = parse_fastqc_data(inf)
-    except Exception:
-        print('Problem opening file: {}'.format(inf, file=sys.stderr))
+    except Exception as e:
+        print(e, 'Problem opening file a: {}'.format(inf), file=sys.stderr)
         return stats
 
     stats['long_QC_num_reads'] = num
@@ -376,8 +376,8 @@ def kraken(sample, stats):
 
         try:
             data = [line for line in open(inf, 'r')]
-        except Exception:
-            print('Problem opening file: {}'.format(inf, file=sys.stderr))
+        except Exception as e:
+            print(e, 'Problem opening file: {}'.format(inf), file=sys.stderr)
             return stats
 
         data = [line.strip().split('\t') for line in data]

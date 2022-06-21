@@ -12,4 +12,4 @@
   "MISEQ":
       "R1": ["MISEQ_Acup/Sample_4B/4B_S4_R1_001.fastq.gz"]
       "R2": ["MISEQ_Acup/Sample_4B/4B_S4_R2_001.fastq.gz"]
-  "minion_path": ["minion_Acup/barcode16/*.fastq.gz"]
+  "minion_path": []

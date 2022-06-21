@@ -149,9 +149,10 @@ rule register_gatk:
 
 rule prep_references:
     input:
-        expand("workflow/resources/alignment_references/{ref}.fasta", ref=[
-            'mabscessus', 'mmassiliense', 'mbolletii'
-        ])
+        expand("workflow/resources/alignment_references/{ref}.{ext}",
+            ref=['mabscessus', 'mmassiliense', 'mbolletii'],
+            ext=['fasta', 'gbk']
+        )
 
 
 rule get_alignment_references:

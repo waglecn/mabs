@@ -246,6 +246,12 @@ rule make_PE_PPE_BED:
 # STAGE 2B RULES
 #
 ######################################################################
+
+rule stage2B_all_outputs:
+    input:
+        "f{res}/internal_reference_map/iref.fasta"
+
+
 rule prepare_internal_reference:
     threads: 1
     input:

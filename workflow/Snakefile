@@ -30,10 +30,10 @@ sample_names = samples.keys()
 long_sample_names = [n for n in sample_names if len(samples[n]['MINION']) > 0]
 both_samples = [n for n in sample_names if n in sample_names and n in long_sample_names]
 # sample_names = list(sample_names)[:20]
-# print(sample_names, file=sys.stderr)
-import pprint
+print("short samples:", sample_names, file=sys.stderr)
+print("long samples:", long_sample_names, file=sys.stderr)
+print("both sample names:", both_samples, file=sys.stderr)
 
-pprint.pprint(samples)
 filt_samples = list(sample_names)
 filtered_samples = config['exclude_samples']
 for name in filtered_samples:
@@ -168,12 +168,16 @@ rule stage1_all_outputs:
             res=res,
             sample=sample_names,
         ),
+        expand(
+            "{res}/{sample}/{sample}.QC.csv",
+            res=res,
+            sample=sample_names
+        ),
         f"{res}/mashtree/assembly_mashtree.complete.tree",
         f"{res}/mashtree/assembly_mashtree.complete.matrix",
-        # type assemblies using MRCAs from mashtree
         f"{res}/QC_summary.csv",
         expand(
-            "{res}/{{sample}}/{{sample}}.{{dflye}}.prokka.gff",
+            "{res}/{sample}/{sample}.{dflye}.prokka.gff",
             res=res, sample=both_samples, dflye="dflye_short_polish"
         )
 
@@ -293,12 +297,12 @@ rule stage3:
                 ref=ref_from_QC(s, f"{res}/QC_summary.csv"), sample=s
             ) for s in filt_samples
         ],
-        # [
-        #     "{res}/{sample}/gubbins/{ref}/RG_SC_RA_bedfilter.gubbins.fasta".format(
-        #         res=res,
-        #         ref=ref_from_QC(s, f"{res}/QC_summary.csv"), sample=s
-        #     ) for s in filt_samples
-        # ],
+        [
+            "{res}/{sample}/gubbins/{ref}/RG_SC_RA_bedfilter_gubbins.fasta".format(
+                res=res,
+                ref=ref_from_QC(s, f"{res}/QC_summary.csv"), sample=s
+            ) for s in filt_samples
+        ],
         expand(
             "{res}/gubbins/{ref}.concatenated.fasta",
             res=res,
