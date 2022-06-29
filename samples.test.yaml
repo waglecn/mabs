@@ -2,7 +2,7 @@
   "MISEQ":
     "R1": ["MISEQ_Acup/Sample_2B/2B_S2_R1_001.fastq.gz"]
     "R2": ["MISEQ_Acup/Sample_2B/2B_S2_R2_001.fastq.gz"]
-  "minion_path" : [calc]
+  "minion_path" : []
 "Sample_3B":
   "MISEQ":
     "R1": ["MISEQ_Acup/Sample_3B/3B_S3_R1_001.fastq.gz"]
