@@ -2,14 +2,19 @@
   "MISEQ":
     "R1": ["MISEQ_Acup/Sample_2B/2B_S2_R1_001.fastq.gz"]
     "R2": ["MISEQ_Acup/Sample_2B/2B_S2_R2_001.fastq.gz"]
-  "minion_path" : ["minion_Acup/barcode14/*.fastq.gz"]
+  "minion_path" : [calc]
 "Sample_3B":
   "MISEQ":
     "R1": ["MISEQ_Acup/Sample_3B/3B_S3_R1_001.fastq.gz"]
     "R2": ["MISEQ_Acup/Sample_3B/3B_S3_R2_001.fastq.gz"]
-  "minion_path": ["minion_Acup/barcode15/*.fastq.gz"]
+  "minion_path": []
 "Sample_4B":
   "MISEQ":
       "R1": ["MISEQ_Acup/Sample_4B/4B_S4_R1_001.fastq.gz"]
       "R2": ["MISEQ_Acup/Sample_4B/4B_S4_R2_001.fastq.gz"]
   "minion_path": []
+"Sample_5B":
+  "MISEQ":
+      "R1": ["MISEQ_Acup/Sample_4B/4B_S4_R1_001.fastq.gz"]
+      "R2": ["MISEQ_Acup/Sample_4B/4B_S4_R2_001.fastq.gz"]
+  "minion_path": ["minion_Acup/barcode17/*.fastq.gz"]

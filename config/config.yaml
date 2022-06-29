@@ -49,4 +49,4 @@ exclude_samples: []
 # internal long_read_reference
 # WARN - only with a single contig sequence!!! undefined behaviour for
 # multi-fasta reference
-internal_ref: ['Sample_5B']
+internal_ref: 'Sample_5B'

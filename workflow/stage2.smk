@@ -249,17 +249,69 @@ rule make_PE_PPE_BED:
 
 rule stage2B_all_outputs:
     input:
-        "f{res}/internal_reference_map/iref.fasta"
-
+        f"{res}/internal_reference_map/iref.fasta",
+        expand(
+            "{res}/{sample}/internal_ref_mapping/temp.merged.sorted.bam",
+            sample=filt_samples, res=res
+        ),
+        expand(
+            "{res}/{sample}/internal_ref_mapping/RG_SC.merged.sorted.bam",
+            sample=filt_samples, res=res
+        ),
+        expand(
+            "{res}/{sample}/internal_ref_mapping/RG_SC.mpileup",
+            sample=filt_samples, res=res
+        ),
+        expand(
+            "{res}/{sample}/internal_ref_mapping/RG_SC_filter.vcf.gz",
+            sample=filt_samples, res=res
+        ),
+        expand(
+            "{res}/{sample}/internal_ref_mapping/RG_SC_filter.hvar.vcf.gz",
+            sample=filt_samples, res=res
+        ),
+        expand(
+            "{res}/{sample}/internal_ref_mapping/RG_SC_DF.bed",
+            sample=filt_samples, res=res
+        ),
+        expand(
+            "{res}/internal_reference_map/merged.RG_SC.consensus.fasta.snpdists.csv",
+            res=res
+        ),
+        expand(
+            "{res}/internal_reference_map/merged.RG_SC.consensus.fasta",
+            res=res
+        ),
+        expand(
+            "{res}/{sample}/internal_ref_mapping/RG_SC.consensus.fa",
+            res=res, sample=filt_samples
+        ),
+        expand(
+            "{res}/{sample}/internal_ref_mapping/RG_SC.mask.bed",
+            res=res, sample=filt_samples
+        ),
+        expand(
+            "{res}/{sample}/internal_ref_mapping/RG_SC.variants.bed",
+            res=res, sample=filt_samples
+        ),
+        expand(
+            "{res}/{sample}/internal_ref_mapping/RG_SC.lowcov.bed",
+            res=res, sample=filt_samples
+        ),
+        expand(
+            "{res}/{sample}/internal_ref_mapping/RG_SC.0cov.bed",
+            res=res, sample=filt_samples
+        )
 
 rule prepare_internal_reference:
     threads: 1
     input:
-        f"{res}/{{iref}}/dflye_medaka/contigs.fa"
+        f"{res}/{config['internal_ref']}/dflye_short_polish/contigs.fa"
     output:
         f"{res}/internal_reference_map/iref.fasta"
     shell:
-        "cat {input} | sed -e 's/>/>{wildcards.iref} > {output} ;"
+        f"cat {{input}} | sed -e 's/>/>{config['internal_ref']}/' > "
+        "{output} ;"
 
 rule map_to_internal_reference:
     threads: 8
@@ -269,7 +321,7 @@ rule map_to_internal_reference:
         R1 = f"{res}/{{sample}}/input/R1.trim.fastq.gz",
         R2 = f"{res}/{{sample}}/input/R2.trim.fastq.gz",
         S1 = f"{res}/{{sample}}/input/S1.trim.fastq.gz",
-        idx = f"{res}/internal_reference/iref.fasta.amb"
+        idx = f"{res}/internal_reference_map/iref.fasta.amb"
     output:
         paired_temp = temp(
             f"{res}/{{sample}}/internal_ref_mapping/paired.sorted.bam"
@@ -283,11 +335,11 @@ rule map_to_internal_reference:
         ),
     shell:
         "bwa-mem2 mem -t {threads} -M "
-        f"{res}/internal_reference/iref.fasta "
+        f"{res}/internal_reference_map/iref.fasta "
         "{input.R1} {input.R2} | samtools view -Sbh - | samtools sort > "
         "{output.paired_temp} ;"
         "bwa-mem2 mem -t {threads} -M "
-        f"{res}/internal_reference/iref.fasta "
+        f"{res}/internal_reference_map/iref.fasta "
         "{input.S1} | samtools view -Sbh - | samtools sort -@ {threads} > "
         "{output.single_temp} ;"
         "samtools index {output.paired_temp} ;"
@@ -336,7 +388,7 @@ rule internal_make_mpileup:
         # -u in samtools 1.7 -> -O v uncompressed VCF output
         # -g in samtools 1.7 -> bcftools includes genotype likelihoods default
         "bcftools mpileup -d 1000 -q 30 -a DP,AD,ADF,ADR,SP -Oz "
-        f"-f {res}/internal_reference/iref.fasta "
+        f"-f {res}/internal_reference_map/iref.fasta "
         "{input} -o {output}"
 
 rule internal_call_and_filter_variants:
@@ -387,9 +439,9 @@ rule make_internal_bed_0cov:
     conda:
         "envs/bwa.yaml"
     input:
-        f"{res}/{{sample}}/internal_ref_mapping//{{step}}.bam"
+        f"{res}/{{sample}}/internal_ref_mapping/{{step}}.merged.sorted.bam"
     output:
-        f"{res}/{{sample}}/internal_ref_mapping//{{step}}.0cov.bed"
+        f"{res}/{{sample}}/internal_ref_mapping/{{step}}.0cov.bed"
     shell:
         "bedtools genomecov -ibam {input} -bga | awk '$4==0' > {output}"
 
@@ -398,23 +450,22 @@ rule make_internal_bed_lowcov:
     conda:
         "envs/bwa.yaml"
     input:
-        f"{res}/{{sample}}/internal_ref_mapping/{{step}}.bam"
+        f"{res}/{{sample}}/internal_ref_mapping/{{step}}.merged.sorted.bam"
     output:
-        f"{res}/{{sample}}/internal_ref_mapping//{{step}}.lowcov.bed"
+        f"{res}/{{sample}}/internal_ref_mapping/{{step}}.lowcov.bed"
     shell:
         "bedtools genomecov -bga -ibam {input} | awk '$4 < 10' > {output}"
 
 rule make_internal_variants_bed:
-    threads:1
+    threads: 1
     conda:
         "envs/bwa.yaml"
     input:
         f"{res}/{{sample}}/internal_ref_mapping/{{step}}_filter.hvar.vcf.gz"
     output:
         f"{res}/{{sample}}/internal_ref_mapping/{{step}}.variants.bed"
-    shell:  
+    shell:
         "bcftools query -f'%CHROM\t%POS0\t%END\n' {input} > {output}"
-
 
 rule make_mask_bed:
     threads: 1
@@ -426,7 +477,7 @@ rule make_mask_bed:
     output:
         f"{res}/{{sample}}/internal_ref_mapping/{{step}}.mask.bed"
     shell:
-        "bedtool subtract -a {input.lowbed} -b {input.varbed} > {output}"
+        "bedtools subtract -a {input.lowbed} -b {input.varbed} > {output}"
 
 
 rule make_simple_consensus:
@@ -434,14 +485,16 @@ rule make_simple_consensus:
     conda:
         "envs/bwa.yaml"
     input:
-        ref = f"{res}/internal_reference/iref.fasta",
-        vcf = f"{res}//{{sample}}/internal_ref_mapping/{{step}}_filter.hvar.vcf.gz"
+        ref = f"{res}/internal_reference_map/iref.fasta",
+        vcf = f"{res}/{{sample}}/internal_ref_mapping/{{step}}_filter.hvar.vcf.gz",
+        idx = f"{res}/{{sample}}/internal_ref_mapping/{{step}}_filter.hvar.vcf.gz.csi",
+        mask = f"{res}/{{sample}}/internal_ref_mapping/{{step}}.mask.bed"
     output:
         f"{res}/{{sample}}/internal_ref_mapping/{{step}}.consensus.fa"
     shell:
         f"bcftools consensus -p {{wildcards.sample}} "
-        "-f {res}/internal_reference/iref.fasta --mark-del '-' "
-        "-m mask.bed -i 'INFO/MQ >= 20 & FORMAT/DP >= 10' {input.vcf} | "
+        "-f {res}/internal_reference_map/iref.fasta --mark-del '-' "
+        "-m {input.mask} -i 'INFO/MQ >= 20 & FORMAT/DP >= 10' {input.vcf} | "
         "sed \"/^>/s/{wildcards.sample}.*/{wildcards.sample}/\" > {output}"
 
 rule merge_simple_consensus:
@@ -451,11 +504,11 @@ rule merge_simple_consensus:
     input:
         expand(
             "{res}/{sample}/internal_ref_mapping/{{step}}.consensus.fa",
-            res=res, sample=both_samples,
+            res=res, sample=filt_samples
         ),
-        f"{res}/internal_reference/iref.fasta"
+        f"{res}/internal_reference_map/iref.fasta"
     output:
-        f"{res}/intenral_reference/merged.{{step}}.consensus.fasta"
+        f"{res}/internal_reference_map/merged.{{step}}.consensus.fasta"
     shell:
         "cat {input} > {output}"
 
@@ -464,11 +517,11 @@ rule filter_consensus:
     conda:
         "envs/phy_plots.yaml"
     input:
-        f"{res}/internal_reference/merged.{{step}}.consensus.fasta"
+        f"{res}/internal_reference_map/merged.{{step}}.consensus.fasta"
     output:
-        f"{res}/internal_reference/merged.{{step}}.consensus.fasta.snpdists.csv"
+        f"{res}/internal_reference_map/merged.{{step}}.consensus.fasta.snpdists.csv"
     shell:
-        "snp-dists -bc {input} > {ouput}"
+        "snp-dists -bc {input} > {output}"
 
 
 rule internal_density_filter_bed:
@@ -476,7 +529,7 @@ rule internal_density_filter_bed:
     conda:
         "envs/bwa.yaml"
     input:
-        f"{res}/{{sample}}/internal_ref_mapping/{{step}}.vcf.gz"
+        f"{res}/{{sample}}/internal_ref_mapping/{{step}}_filter.hvar.vcf.gz"
     output:
         f"{res}/{{sample}}/internal_ref_mapping/{{step}}_DF.bed"
     shell:

@@ -176,9 +176,11 @@ rule make_mapping_bwa_index:
         "envs/bwa.yaml"
     threads: 1
     input:
-        "workflow/resources/alignment_references/{ref}.fasta"
+        # "workflow/resources/alignment_references/{ref}.fasta"
+        "{ref}.fasta"
     output:
-        "workflow/resources/alignment_references/{ref}.fasta.amb"
+        "{ref}.fasta.amb"
+        #"workflow/resources/alignment_references/{ref}.fasta.amb"
     shell:
         "bwa-mem2 index {input}"
 
