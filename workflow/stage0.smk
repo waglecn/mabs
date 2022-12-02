@@ -122,29 +122,28 @@ def aggregate_refseq(wildcards):
     assembly_files = assembly_name + outgroup_name + landmark_name
     return assembly_files
 
+
 rule get_gatk_jar:
     conda:
         "envs/bzip2.yaml"
     params:
-        jar = config['gatk3_jar'],
         url = config['gatk3_jar_url']
     output:
-        "workflow/resources/{params.jar}"
+        f"workflow/resources/{config['gatk3_jar']}"
     shell:
         "wget {params.url} -P workflow/resources/ ; "
-        "bunzip2 -c workflow/resources/GenomeAnalysisTK-*.tar.bz2 > {output}"
+        "bunzip2 -c workflow/resources/GenomeAnalysisTK-*.tar.bz2 | "
+        "tar Oxf - > {output}"
 
 
 rule register_gatk:
     conda: "envs/gatk3.yaml"
+    input:
+        f"workflow/resources/{config['gatk3_jar']}"
     output:
         "workflow/resources/gatk-registered"
-    params:
-        gatk_jar = "workflow/resources/{gatk_jar}".format(
-            gatk_jar=config['gatk3_jar'],
-        )
     shell:
-        "echo {output} ; gatk3-register {params.gatk_jar} ; touch {output}"
+        "echo {output} ; gatk3-register {input} ; touch {output}"
 
 
 rule prep_references:
