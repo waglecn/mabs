@@ -2,4 +2,5 @@ channels:
     - conda-forge
     - bioconda
 dependencies:
+    - gsl=2.5
     - bioconda::mashtree
