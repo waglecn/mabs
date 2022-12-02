@@ -79,7 +79,7 @@ rule MRCA_ref_gatk_realignment_intervals:
         bai = f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/tempRGSC.merged.sorted.bam.bai",
         seqdict = "workflow/resources/alignment_references/{ref}.dict",
         fai = "workflow/resources/alignment_references/{ref}.fasta.fai",
-        # gatk = "workflow/resources/gatk-registered"
+        gatk = "workflow/resources/gatk-registered"
     output:
         f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/RG_SC_RA.intervals"
     log:
@@ -147,7 +147,7 @@ rule MRCA_call_and_filter_variants:
         # -Ov output uncompressed vcf
         # -m multiallelic caller
         # -v variants only
-        "bcftools call -Ov -m -v {input} | "
+        "bcftools call --ploidy 1 -Ov -m -v --ploidy 1 {input} | "
         # filtering
         # MQ mapping quality
         # ID-SP - Phred-scaled strand bias p-value
@@ -172,7 +172,7 @@ rule MRCA_inverse_filter:
     output:
         f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step}}_filter.failed.vcf.gz"
     shell:
-        "bcftools call -Oz -m -v {input} | "
+        "bcftools call --ploidy 1 -Oz -m -v {input} | "
         "bcftools filter -i 'SP>=45 || MQ<=30 || FORMAT/DP<=10 || QUAL<=50' "
         "-o {output}"
 
@@ -187,7 +187,7 @@ rule MRCA_inverse_AD_filter:
     params:
         snp_cutoff = 0.90
     shell:
-        "bcftools call -Oz -m -v {input} | "
+        "bcftools call --ploidy 1 -Oz -m -v {input} | "
         "bcftools filter -i '(AD[0:1]/(AD[0:0]+AD[0:1]) < "
         "{params.snp_cutoff}) & (ADF[0:1]<=1 || ADR[0:1]<=1)' -o {output}"
 
@@ -403,7 +403,7 @@ rule internal_call_and_filter_variants:
         # -Ov output uncompressed vcf
         # -m multiallelic caller
         # -v variants only
-        "bcftools call -Ov -m -v {input} | "
+        "bcftools call --ploidy 1 -Ov -m -v {input} | "
         # filtering
         # MQ mapping quality
         # ID-SP - Phred-scaled strand bias p-value
