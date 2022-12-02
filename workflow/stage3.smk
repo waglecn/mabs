@@ -220,7 +220,7 @@ def snpEff_db(ref):
     elif ref == 'mmassiliense':
         return "Mycobacterium_abscessus_subsp_bolletii_ccug_48898_jcm_15300_" \
             "gca_000497265"
-    elif ref == 'mbolettii':
+    elif ref == 'mbolletii':
         return "Mycobacterium_abscessus_subsp_bolletii_bd"
 
 

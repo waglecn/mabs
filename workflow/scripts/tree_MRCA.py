@@ -62,7 +62,7 @@ def tree_MRCA(in_tree, sample):
 
     mindist = min([mbol_dist, mmas_dist, mabs_dist])
     if mindist == mbol_dist:
-        return 'mbolettii'
+        return 'mbolletii'
     elif mindist == mmas_dist:
         return 'mmassiliense'
     elif mindist == mabs_dist:
@@ -77,7 +77,7 @@ if __name__ == '__main__':
     target = tree_MRCA(in_tree, sample)
     # used in shell to determine MLST
     # for the purposes of MLST, we will use the mmas scheme
-    if mode == 'mlst' and target == "mbolettii":
+    if mode == 'mlst' and target == "mbolletii":
             print('mmassiliense')
     else:
         print(target)

@@ -2,9 +2,9 @@
 target_species_taxid: 670516
 # copy into resources directory - provide your own, due to license
 gatk3_jar: "GenomeAnalysisTK.jar"
-gatk3_jar_url: "https://storage.cloud.google.com/gatk-software/package-archive/gatk/GenomeAnalysisTK-3.8-1-0-gf15c1c3ef.tar.bz2"
+gatk3_jar_url: "https://storage.googleapis.com/gatk-software/package-archive/gatk/GenomeAnalysisTK-3.8-1-0-gf15c1c3ef.tar.bz2"
 # base location of internal sample read data
-data_dir: "/media/nick/8TB/SGL_MA/"
+data_dir: "test_data/"
 # Replace this with the sample sheet for your own samples, see provided example
 # for the format
 sample_sheet: "samples.test.yaml"
@@ -14,7 +14,7 @@ adapters_fasta: "workflow/resources/TruSeq3-PE.fa"
 # minimum length of read to keep - see Martin et al 2018, referenced in Lee et al 2020
 QC_min_length: 36
 # a directory, downloaded from kraken2 ftp - see Required Files in readme.md
-kraken_db: "/media/nick/hex/2TB/backup-ignore/MA/minikraken2_v2_8GB_201904_UPDATE/"
+kraken_db: "/media/nick/hex/k2_plusfp_20220908_16"
 # This is on a fast SSD, shovill faster
 shovill_tempdir: "/home/nick/Downloads/tmp"
 # set the amount of mem per assembly for shovill in GB
@@ -38,7 +38,7 @@ erm41_query: "workflow/resources/Erm41.fa"
 outgroup_assembly: "GCF_000195955.2"
 # directroy for all results
 results_dir: "results_test"
-# default mash taxa bolettii, mmas, abscessus
+# default mash taxa bolletii, mmas, abscessus
 mash_ref_taxa: {
     'mbolletii': 'GCF_003609715.1',
     'mmassiliense': 'GCF_000497265.2',
@@ -49,4 +49,4 @@ exclude_samples: []
 # internal long_read_reference
 # WARN - only with a single contig sequence!!! undefined behaviour for
 # multi-fasta reference
-internal_ref: 'Sample_5B'
+internal_ref: ''

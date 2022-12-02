@@ -35,7 +35,7 @@ erm41_query: "workflow/resources/Erm41.fa"
 outgroup_assembly: "GCF_000195955.2"
 # directroy for all results
 results_dir: "results_test"
-# default mash taxa bolettii, mmas, abscessus
+# default mash taxa bolletii, mmas, abscessus
 mash_ref_taxa: {
     'mbolletii': 'GCF_003609715.1',
     'mmassiliense': 'GCF_000497265.2',
