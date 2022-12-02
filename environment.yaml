@@ -10,7 +10,7 @@ dependencies:
   - bioconda::bcftools=1.9
   - bioconda::samtools=1.9
   - bwa=0.7.17
-  - pysam =0.15.0
-  - bioconda::ete3
+  - pysam=0.15.0
+  - conda-forge::ete3=3.1.2
   - bioconda::pyvcf=0.6.8
   - bioconda::bedtools=2.30.0
