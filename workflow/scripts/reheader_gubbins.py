@@ -8,8 +8,9 @@ def main(infile=sys.argv[1], name=sys.argv[2]):
     # outname = tail.split('.')[0]
     record = [r for r in SeqIO.parse(infile, 'fasta')]
     # this step explicitly dropps the plasmid record[1] in mabs
+    seq = "".join([str(r.seq) for r in record])
     print(">{0}\n{1}\n".format(
-        name, record[0].seq
+        name, seq
     ))
 
 if __name__ == '__main__':
