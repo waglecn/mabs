@@ -23,7 +23,8 @@ rule merge_0cov_bed:
         # something to do with bash strict mode?
         "echo '' | "
         "cat - {input} | "
-        "grep 'NC_010394' -v | sort -k 1,1n -k 2,2n | uniq | "
+        # "grep 'NC_010394' -v | sort -k 1,1n -k 2,2n | uniq | "
+        "bedtools sort -i - | "
         "bedtools merge -i - > {output}"
 
 rule merge_DF_bed:
@@ -41,7 +42,9 @@ rule merge_DF_bed:
         f"{res}/MRCA_ref_mapping/{{ref}}/RG_SC_RA.merge.DF.bed"
     shell:
         "echo '' | cat - {input} | "
-        "grep 'NC_010394' -v | sort -k 1,1n -k 2,2n | uniq | "
+        "grep 'NC_010394' -v | "
+        # "sort -k 1,1n -k 2,2n | uniq | "
+        "bedtools sort -i - | "
         "bedtools merge -i - > {output}"
 
 rule merge_bed:
@@ -58,7 +61,9 @@ rule merge_bed:
     shell:
         "echo '' | "
         "cat - {input} | "
-        r"grep 'NC_010394\.1' -v | sort -k 1,1n -k 2,2n | cut -f 1-3 | "
+        r"grep 'NC_010394\.1' -v | "
+        # "sort -k 1,1n -k 2,2n | cut -f 1-3 | "
+        "bedtools sort -i - | "
         "bedtools merge -i - > {output}"
 
 rule filter_vcf_with_bed:
