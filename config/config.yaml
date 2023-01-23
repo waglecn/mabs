@@ -42,7 +42,9 @@ results_dir: "results_test"
 mash_ref_taxa: {
     'mbolletii': 'GCF_003609715.1',
     'mmassiliense': 'GCF_000497265.2',
-    'mabscessus': 'GCF_001942505.1'
+    #'mabscessus': 'GCF_001942505.1',
+    'mabscessus': 'GCF_000069185.1'
+
 }
 # samples to exclude in stage 2
 exclude_samples: []
@@ -50,3 +52,4 @@ exclude_samples: []
 # WARN - only with a single contig sequence!!! undefined behaviour for
 # multi-fasta reference
 internal_ref: ''
+min_snp_freq: 0.90
