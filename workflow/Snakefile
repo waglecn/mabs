@@ -1,4 +1,5 @@
 # copyright 2022 nicholas.waglechner@sinaihealth.ca
+import sys
 import os
 import pandas as pd
 import glob
@@ -6,6 +7,9 @@ import glob
 # add to command line to be explicit --configfile: ./config/config.yaml"
 if len(config) == 0:
     exit('no configfile specified: use --configfile [file]')
+
+config_path = sys.argv[sys.argv.index('--configfile') + 1]
+print(f"using config: {config_path}", file=sys.stderr)
 
 container: "docker://continuumio/miniconda3:4.9.2"
 
@@ -27,8 +31,21 @@ include: "common.smk"
 
 samples = get_samples()
 sample_names = samples.keys()
+# TODO this is kind of lazy, and could use some more checks to ensure there are
+# paired R1 and R2 for each sample
+short_sample_names = [n for n in sample_names if len(samples[n]['MISEQ']['R1']) > 0]
 long_sample_names = [n for n in sample_names if len(samples[n]['MINION']) > 0]
-both_samples = [n for n in sample_names if n in sample_names and n in long_sample_names]
+short_only_sample_names = [
+    n for n in short_sample_names if n not in long_sample_names
+]
+long_only_sample_names = [
+    n for n in long_sample_names if n not in short_sample_names
+]
+both_samples = [
+    n for n in sample_names if 
+    n in short_sample_names and 
+    n in long_sample_names
+]
 # sample_names = list(sample_names)[:20]
 print("short samples:", sample_names, file=sys.stderr)
 print("long samples:", long_sample_names, file=sys.stderr)
@@ -56,11 +73,6 @@ else:
         f"--model {config['dflye_medaka_model']} " \
         f"--medaka_opts \'{config['dflye_medaka_opts']}\' "
 
-
-# Rule "all" default catches output of other rules as input in order to
-# simplify running the workflow
-# - add target rules here as they are implemented
-
 # external data rules + GATK initialization
 include: "stage0.smk"
 
@@ -75,6 +87,9 @@ include: "stage3.smk"
 
 rule all:
 
+# Rule "all" default catches output of other rules as input in order to
+# simplify running the workflow
+# - add target rules here as they are implemented
 
 rule stage1:
     input:
@@ -89,27 +104,27 @@ rule stage1_all_outputs:
         expand(
             "{res}/{sample}/input/{R}_fastqc.html",
             res=res,
-            sample=sample_names,
+            sample=short_sample_names,
             R=["R1", "R2"],
         ),
         # trimmed input
         expand(
             "{res}/{s}/input/{read}.trim.fastq.gz",
             res=res,
-            s=sample_names,
+            s=short_sample_names,
             read=["R1", "R2", "S1", "S2"],
         ),
         # post-trim QC
         expand(
             "{res}/{s}/input/{read}.trim_fastqc.data.txt",
             res=res,
-            s=sample_names,
+            s=short_sample_names,
             read=["R1", "R2", "S1", "S2"],
         ),
         expand(
             "{res}/{s}/input/{read}_fastqc.data.txt",
             res=res,
-            s=sample_names,
+            s=short_sample_names,
             read=["R1", "R2"],
         ),
         expand(
@@ -121,18 +136,18 @@ rule stage1_all_outputs:
         expand(
             "{res}/{sample}/input/kraken.trimmed.paired",
             res=res,
-            sample=sample_names,
+            sample=short_sample_names,
         ),
         expand(
             "{res}/{sample}/input/kraken.trimmed.single",
             res=res,
-            sample=sample_names,
+            sample=short_sample_names,
         ),
         # assembly with shovill
         expand(
             "{res}/{sample}/shovill_assembly/{sample}.shovill.contigs.fa",
             res=res,
-            sample=sample_names,
+            sample=short_sample_names,
         ),
         expand(
             "{res}/{sample}/dflye/contigs.fa",
@@ -144,29 +159,53 @@ rule stage1_all_outputs:
             res=res,
             sample=both_samples,
         ),
-        # kraken2 the assembly
+        # kraken2 the illumina assembly
         expand(
             "{res}/{sample}/shovill_assembly/kraken.assembly",
             res=res,
-            sample=sample_names,
+            sample=short_sample_names,
         ),
-        # MRCA ref per sample
+        # kraken2 the long_only assembly
+        expand(
+            "{res}/{sample}/dflye/contigs.fa",
+            res=res,
+            sample=long_sample_names,
+        ),
+        # MRCA ref per illumina sample
         expand(
             "{res}/{sample}/{sample}.MRCA.csv",
             res=res,
-            sample=sample_names,
+            sample=short_sample_names,
         ),
-        # MLST ref per sample
+        # MRCA ref per long sample
+        expand(
+            "{res}/{sample}/{sample}.long.MRCA.csv",
+            res=res,
+            sample=long_only_sample_names,
+        ),
+        # MLST ref per illumina sample
         expand(
             "{res}/{sample}/{sample}.MLST.csv",
             res=res,
-            sample=sample_names,
+            sample=short_sample_names,
         ),
-        # determine the basic Erm(41) status with TBLASTN
+        # MLST ref per long_only sample
+        expand(
+            "{res}/{sample}/{sample}.long.MLST.csv",
+            res=res,
+            sample=long_sample_names,
+        ),
+        # determine the basic Erm(41) status with TBLASTN in short sample
         expand(
             "{res}/{sample}/{sample}.erm41.status",
             res=res,
-            sample=sample_names,
+            sample=short_sample_names,
+        ),
+        # determine the basec Erm(41) satus with TBLASTN in long samples
+        expand(
+            "{res}/{sample}/{sample}.long.erm41.status",
+            res=res,
+            sample=long_sample_names,
         ),
         expand(
             "{res}/{sample}/{sample}.QC.csv",

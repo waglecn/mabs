@@ -49,7 +49,7 @@ rule merge_ill_samples_only:
         expand(
             "{res}/{s}/input/{R}.fastq.gz",
             res=res,
-            s=sample_names, R=["R1", "R2"]
+            s=short_sample_names, R=["R1", "R2"]
         )
 
 rule merge_long_samples_only:
@@ -57,7 +57,7 @@ rule merge_long_samples_only:
         expand(
             "{res}/{s}/input/long.fastq.gz",
             res=res,
-            s=sample_names, R=['MINION']
+            s=long_sample_names, R=['MINION']
         )
 
 rule merge_samples:

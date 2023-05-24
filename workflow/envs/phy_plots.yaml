@@ -9,6 +9,7 @@ dependencies:
   - seaborn
   - statsmodels
   - fastcluster
+  - pyyaml
   - bioconda::snp-dists
   - bioconda::snp-sites
   - xlrd=1.2.0
