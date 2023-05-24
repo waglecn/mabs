@@ -39,6 +39,8 @@ Gey van Pittius et al (2006) BMC Evol Biol 6:95.
 
 Brennen (2017) Infect Immun 85(6):e00969-16
 <https://iai.asm.org/content/85/6/e00969-16>
+
+This has been modified to extract the PPE and PGRS family protein from the CDS product
 '''
 
 import sys
@@ -51,12 +53,12 @@ for r in records:
     CDS = [f for f in r.features if f.type == 'CDS']
     for c in CDS:
         label = []
-        if 'db_xref' in c.qualifiers:
-            for db_xref in c.qualifiers['db_xref']:
-                if 'IPR000030' in db_xref:
-                    label.append('PPE_IPR000030')
-                if 'IPR000084' in db_xref:
-                    label.append('PE_IPR000084')
+        if 'product' in c.qualifiers:
+            for product in c.qualifiers['product']:
+                if 'PPE family protein' in product:
+                    label.append(product)
+                if 'PE-PGRS family protein' in product:
+                    label.append(product)
         if len(label) > 0:
             print('{}\t{}\t{}\t{}'.format(
                 r.id, c.location.start - 1, c.location.end, ','.join(label)
