@@ -23,7 +23,7 @@ for inf in infiles:
         if output is None:
             output = df
         else:
-            output = output.append(df, ignore_index=True)
+            output = output.append(df, sort=False, ignore_index=True)
     except Exception as e:
         print(inf, e)
 

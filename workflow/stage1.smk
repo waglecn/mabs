@@ -249,14 +249,15 @@ rule dflye_assembly:
     input:
         f"{res}/{{sample}}/input/long.fastq.gz"
     output:
-        f"{res}/{{sample}}/dflye/contigs.fa"
+        f"{res}/{{sample}}/dflye/{{sample}}.dflye.contigs.fa"
     log:
         f"{res}/{{sample}}/dflye/dflye_assembly.log"
     shell:
         "dragonflye --reads {input} --trim --gsize {params.size} --outdir "
         f"{res}/{{wildcards.sample}}/dflye --force "
         "--cpus {threads} {params.medaka} --racon {params.racon} "
-        "2>&1 | tee {log}"
+        "2>&1 | tee {log} ; "
+        f"cp {res}/{{wildcards.sample}}/dflye/contigs.fa {{output}}"
 
 rule dflye_short_polish_assembly:
     threads: 8
@@ -303,6 +304,24 @@ rule kraken2_contamination_assembly:
         "kraken2 --db {params.kdb} --threads {threads} --quick "
         "{input} --report {output.report} --output - 2>&1 | tee {log}"
 
+rule kraken2_contamination_long_assembly:
+    threads: 1
+    conda:
+        "envs/kraken2.yaml"
+    input:
+        f"{res}/{{sample}}/dflye/contigs.fa"
+    output:
+        report = f"{res}/{{sample}}/dflye/dflye.assembly"
+    params:
+        kdb = config["kraken_db"]
+    log:
+        f"{res}/{{sample}}/dflye/dflye.assembly.log"
+    shell:
+        "kraken2 --db {params.kdb} --threads {threads} --quick "
+        "{input} --report {output.report} --output - 2>&1 | tee {log}"
+
+
+
 # Basic BLAST detection of Erm(41) - looking for intact or truncated CDS
 rule assembly_status_erm41:
     threads: 1
@@ -318,9 +337,25 @@ rule assembly_status_erm41:
         "tblastn -subject {input} -query {params.query_file} -outfmt 6 "
         "| head -n 1 | cut -f 2,3,4,6,7,8,9,10 > {output}"
 
+
+rule assembly_status_erm41_long:
+    threads: 1
+    conda:
+        "envs/blast.yaml"
+    input:
+        f"{res}/{{sample}}/dflye/contigs.fa"
+    output:
+        f"{res}/{{sample}}/{{sample}}.long.erm41.status"
+    params:
+        query_file = config["erm41_query"]
+    shell:
+        "tblastn -subject {input} -query {params.query_file} -outfmt 6 "
+        "| head -n 1 | cut -f 2,3,4,6,7,8,9,10 > {output}"
+
+
 # Everything gets mapped to ATCC19977 to determine basic coverage for QC
 # Consider splitting this up to use threads better
-rule map_to_mabs:
+rule short_map_to_mabs:
     conda:
         "envs/bwa.yaml"
     threads: 4
@@ -356,20 +391,47 @@ rule map_to_mabs:
         "{output.merge_sorted} ;"
         "samtools index {output.merge_sorted} {output.merge_sorted_bai}"
 
+rule long_map_to_mabs:
+    conda:
+        "envs/bwa.yaml"
+    threads: 8
+    input:
+        f"{res}/{{sample}}/input/long.fastq.gz"
+    output:
+        bam = f"{res}/{{sample}}/ref_mapping/mabs/longmerged.sorted.bam",
+        index = f"{res}/{{sample}}/ref_mapping/mabs/longmerged.sorted.bam.bai"
+    shell:
+        "minimap2 -x map-ont -t {threads} -a "
+        "workflow/resources/alignment_references/mabscessus.fasta {input} | "
+        "samtools view -Sbh - | samtools sort > {output.bam} ; "
+        "samtools index {output.bam} {output.index} "
+
 rule depth_map_to_mabs:
     threads: 1
     conda:
         "envs/bwa.yaml"
     input:
         f"{res}/{{sample}}/ref_mapping/mabs/merged.sorted.bam"
-    params:
-        execdir = exec_dir
     output:
         depth = f"{res}/{{sample}}/ref_mapping/mabs/merged.sorted.depth.gz"
     shell:
         "bedtools genomecov -d -ibam {input} -g "
         "workflow/resources/alignment_references/mabcessus.fasta | gzip > "
         "{output.depth} "
+
+rule long_depth_map_to_maps:
+    threads: 1
+    conda:
+        "envs/bwa.yaml"
+    input:
+        f"{res}/{{sample}}/ref_mapping/mabs/longmerged.sorted.bam"
+    output:
+        depth = f"{res}/{{sample}}/ref_mapping/mabs/longmerged.sorted.depth.gz"
+    shell:
+        "bedtools genomecov -d -ibam {input} -g "
+        "workflow/resources/alignment_references/mabscessus.fasta | gzip > "
+        "{output.depth}"
+
 
 # This rule puts everything in context of a rough mashtree to determine MRCA
 # for downstream rules - MLST, specific references
@@ -390,7 +452,11 @@ rule mashtree_assemblies:
         internal = expand(
             "{res}/{sample}/shovill_assembly/{sample}.shovill.contigs.fa",
             res=res,
-            sample=sample_names
+            sample=short_sample_names
+        ) + expand(
+            "{res}/{sample}/dflye/{sample}.dflye.contigs.fa",
+            res=res, 
+            sample=long_sample_names
         )
     params:
         # the mashtree tempdir can get large, depending on the number of
@@ -419,7 +485,21 @@ rule MRCA_from_tree:
     output:
         f"{res}/{{sample}}/{{sample}}.MRCA.csv"
     shell:
-        "workflow/scripts/tree_MRCA.py ref {input} {wildcards.sample} > {output}"
+        "workflow/scripts/tree_MRCA.py ref {input} {wildcards.sample} "
+        f"{config_path} > {{output}}"
+
+
+rule MRCA_long_from_tree:
+    threads: 1
+    conda:
+        "envs/ngd_phylo.yaml"
+    input:
+        f"{res}/mashtree/assembly_mashtree.complete.tree"
+    output:
+        f"{res}/{{sample}}/{{sample}}.long.MRCA.csv"
+    shell:
+        "workflow/scripts/tree_MRCA.py ref {input} {wildcards.sample} "
+        f"{config_path} > {{output}}"
 
 
 # This rule determines which samples will use which reference or MLST scheme
@@ -439,10 +519,23 @@ rule MRCA_MLST:
         "mlst --scheme mabscessus --threads {threads} "
         "{input.assembly} > {output}"
 
+rule MRCA_long_MLST:
+    threads: 1
+    conda:
+        "envs/ngd_phylo.yaml"
+    input:
+        tree = f"{res}/mashtree/assembly_mashtree.complete.tree",
+        assembly = f"{res}/{{sample}}/dflye/contigs.fa"
+    output:
+        f"{res}/{{sample}}/{{sample}}.long.MLST.csv"
+    shell:
+        "mlst --scheme mabscessus --threads {threads} "
+        "{input.assembly} > {output}"
+
 
 def QC_input(wildcards):
     outf = {}    
-    if wildcards.sample in sample_names:
+    if wildcards.sample in short_sample_names:
         outf['short_preR1_fastqc'] = f"{res}/{wildcards.sample}/input/R1_fastqc.data.txt",
         outf['short_preR2_fastqc'] = f"{res}/{wildcards.sample}/input/R2_fastqc.data.txt",
         outf['short_tR1_fastqc'] = f"{res}/{wildcards.sample}/input/R1.trim_fastqc.data.txt",
@@ -463,6 +556,12 @@ def QC_input(wildcards):
     if wildcards.sample in long_sample_names:
         outf['long_fastqc'] = f"{res}/{wildcards.sample}/input/long_fastqc.data.txt",
         outf['long_assembly'] = f"{res}/{wildcards.sample}/dflye/contigs.fa",
+        outf['MRCA_long'] = f"{res}/{wildcards.sample}/{wildcards.sample}.long.MRCA.csv",
+        outf['MLST_long'] = f"{res}/{wildcards.sample}/{wildcards.sample}.long.MLST.csv",
+        outf['erm41_long'] = f"{res}/{wildcards.sample}/{wildcards.sample}.long.erm41.status",
+    if wildcards.sample in long_only_sample_names:
+        outf['mabs_bam'] = f"{res}/{wildcards.sample}/ref_mapping/mabs/longmerged.sorted.bam",
+        outf['mabs_depth'] = f"{res}/{wildcards.sample}/ref_mapping/mabs/longmerged.sorted.depth.gz",
     if wildcards.sample in both_samples:
         outf['long_polish_assembly'] = f"{res}/{wildcards.sample}/dflye_short_polish/contigs.fa",
 
@@ -515,7 +614,7 @@ rule merge_QC_summary:
         expand(
             "{res}/{sample}/{sample}.QC.csv",
             res=res,
-            sample=sample_names
+            sample=short_sample_names + long_sample_names
         )
     output:
         f"{res}/QC_summary.csv"

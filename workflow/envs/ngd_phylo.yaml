@@ -5,3 +5,4 @@ dependencies:
     - conda-forge::ete3=3.1.2
     - bioconda::ncbi-genome-download
     - bioconda::mlst
+    - conda-forg:pyyaml=6.0

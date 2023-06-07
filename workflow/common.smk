@@ -1,4 +1,4 @@
-def ref_from_QC(sample_name, QC_summary_file="QC_summary.csv"):
+def ref_from_QC(sample_name, QC_summary_file="QC_summary.csv", data="short"):
     import sys
     '''
     Every rule using this function must require QC_summary.csv in input files
@@ -7,7 +7,10 @@ def ref_from_QC(sample_name, QC_summary_file="QC_summary.csv"):
     try:
         QC_data = pd.read_csv(QC_summary_file)
         QC_data.index = QC_data['sample']
-        ref = QC_data.loc[sample_name]['MRCA_ref']
+        if data == 'short':
+            ref = QC_data.loc[sample_name]['MRCA_ref']
+        elif data == 'long':
+            ref = QC_data.loc[sample_name]['MRCA_long_ref']
     except FileNotFoundError:
         print('QC summary file not found', file=sys.stderr)
     except KeyError:
@@ -48,7 +51,7 @@ rule index_bam:
     input:
         "{inbam}.bam"
     output:
-        "{inbam}.bam.bai"
+        temp("{inbam}.bam.bai")
     shell:
         "samtools index {input} "
 
@@ -76,3 +79,15 @@ rule create_fasta_dict_index:
     shell:
         "picard CreateSequenceDictionary -R {input} -O {output.seqdict} && "
         "samtools faidx {input} -o {output.fai}"
+
+# make ref BED for PE  PPE genes
+rule make_PE_PPE_BED:
+    threads: 1
+    conda:
+        "envs/phy_plots.yaml"
+    input:
+        "workflow/resources/alignment_references/{ref}.gbk"
+    output:
+        "workflow/resources/alignment_references/{ref}.PE_PPE.bed"
+    shell:
+        "workflow/scripts/make_PE_PPE_BED.py {input} > {output}"

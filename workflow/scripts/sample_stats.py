@@ -2,12 +2,10 @@
 
 import sys
 from pathlib import Path
-import pprint
 import gzip
 from Bio import SeqIO
 import numpy as np
 import pandas as pd
-import re
 from collections import OrderedDict
 
 """
@@ -108,14 +106,14 @@ def parse_fastqc_data(infile):
             PSQS = s
         if '>>Sequence Length Distribution' in s[0]:
             SLD = s
-    assert len(BS) is not 0
-    assert len(PSQS) is not 0
-    assert len(SLD) is not  0
+    assert len(BS) != 0
+    assert len(PSQS) != 0
+    assert len(SLD) != 0
 
     # parse PSQS
     num = 0
     SQ = 0
-    PSQS = [a.split('\t') for a in PSQS if a[0] is not '>']
+    PSQS = [a.split('\t') for a in PSQS if a[0] != '>']
     for i in PSQS[1:]:
         SQ += float(i[0]) * float(i[1])
         num += float(i[1])
@@ -123,7 +121,7 @@ def parse_fastqc_data(infile):
 
     total_bases = 0
     approx = False
-    SLD = [a.split('\t') for a in SLD if a[0] is not '>']
+    SLD = [a.split('\t') for a in SLD if a[0] != '>']
     for i in SLD[1:]:
         if '-' in i[0]:
             approx = True
@@ -138,9 +136,9 @@ def parse_fastqc_data(infile):
 
     total_bases = round(total_bases, -6)
 
-    assert num is not 0
-    assert MQ is not 0
-    assert total_bases is not '0'
+    assert num != 0
+    assert MQ != 0
+    assert total_bases != '0'
 
     return(num, MQ, total_bases, Mlen)
 
@@ -158,13 +156,12 @@ def fastqc_short_raw(sample, stats):
     stats['raw_QC_bases1'] = 'N/A'
     stats['raw_QC_bases2'] = 'N/A'
 
-
     for i in ['1', '2']:
         inf = base / 'input' / f'R{i}_fastqc.data.txt'
         try:
             num, MQ, total_bases, Mlen = parse_fastqc_data(inf)
         except Exception:
-            print('Problem opening file: {}'.format(inf, file=sys.stderr))
+            print('Problem opening file: {}'.format(inf), file=sys.stderr)
             return stats
 
         stats[f'raw_QC_reads{i}'] = num
@@ -198,7 +195,7 @@ def short_raw(sample, stats):
     length1 = 0
     bases1 = 0
 
-    for i in ['1', '2']:        
+    for i in ['1', '2']:
         inf = base / 'input' / f'R{i}.fastq.gz'
     try:
         with gzip.open(inf, 'rt') as handle:
@@ -208,7 +205,7 @@ def short_raw(sample, stats):
                 length1 = len(r)
                 bases1 += length1
     except Exception:
-        print('Problem opening file: {}'.format(inf, file=sys.stderr))
+        print('Problem opening file: {}'.format(inf), file=sys.stderr)
         return stats
 
     reads2 = 0
@@ -224,7 +221,7 @@ def short_raw(sample, stats):
                 length2 = len(r)
                 bases2 += length2
     except Exception:
-        print('Problem opening file: {}'.format(inf, file=sys.stderr))
+        print('Problem opening file: {}'.format(inf), file=sys.stderr)
         return stats
 
     stats['raw_QC_num_pairs'] = reads1
@@ -239,6 +236,7 @@ def short_raw(sample, stats):
 
     # pprint.pprint(stats['raw'])
     return stats
+
 
 def fastqc_post_trim_QC(sample, stats):
     base = Path(f"{stats['results_dir']}/{sample}")
@@ -264,7 +262,7 @@ def fastqc_post_trim_QC(sample, stats):
         try:
             num, MQ, total_bases, Mlen = parse_fastqc_data(inf)
         except Exception:
-            print('Problem opening file: {}'.format(inf, file=sys.stderr))
+            print('Problem opening file: {}'.format(inf), file=sys.stderr)
             return stats
 
         stats[f'post_trim_QC_reads{i}'] = num
@@ -280,7 +278,6 @@ def fastqc_post_trim_QC(sample, stats):
     stats['post_trim_QC_num_single_bases'] = (
         stats['post_trim_QC_basesS1'] + stats['post_trim_QC_basesS2']
     )
-
 
     return stats
 
@@ -317,7 +314,7 @@ def post_trim_QC(sample, stats):
                 stats[f'post_trim_QC_mean_length{i}'] = length
                 stats[f'post_trim_QC_bases{i}'] = bases
         except Exception:
-            print('Problem opening file: {}'.format(inf, file=sys.stderr))
+            print('Problem opening file: {}'.format(inf), file=sys.stderr)
             return stats
 
     stats['post_trim_QC_num_pairs'] = stats['post_trim_QC_R1']
@@ -328,7 +325,6 @@ def post_trim_QC(sample, stats):
         stats['post_trim_QC_S1'] + stats['post_trim_QC_S2']
     )
 
-    #pprint.pprint(stats['post_trim_QC'])
     return stats
 
 
@@ -339,7 +335,6 @@ def fastqc_long_QC(sample, stats):
     stats['long_QC_mean_length'] = 'N/A'
     stats['long_QC_mean_qual'] = 'N/A'
     stats['long_QC_num_bases'] = 'N/A'
-
 
     try:
         base = Path(f'./{results_dir}/{sample}')
@@ -445,7 +440,6 @@ def long_assembly(sample, stats):
     except Exception as e:
         print(e, "Problem opening file: {}".format(inf), file=sys.stderr)
         return stats
-
     stats['long_assembly_num_contigs'] = len(records)
     stats['long_assembly_length'] = sum([len(r) for r in records])
 
@@ -461,6 +455,7 @@ def long_assembly(sample, stats):
     # pprint.pprint(stats['assembly'])
 
     return stats
+
 
 def long_polished_assembly(sample, stats):
     results_dir = stats['results_dir']
@@ -552,6 +547,63 @@ def mapping(sample, stats):
     # pprint.pprint(stats['map'])
     return stats
 
+def long_mapping(sample, stats):
+    results_dir = stats['results_dir']
+    stats['long_map_mapped_reads'] = 'N/A'
+    stats['long_map_ref_bases'] = 'N/A'
+    stats['long_map_bases_0cov'] = 'N/A'
+    stats['long_map_bases_gte1cov'] = 'N/A'
+    stats['long_map_bases_gte50cov'] = 'N/A'
+    stats['long_map_bases_gte100cov'] = 'N/A'
+    stats['long_map_bases_gte1000cov'] = 'N/A'
+    stats['long_map_frac_0cov'] = 'N/A'
+    stats['long_map_frac_gte1cov'] = 'N/A'
+    stats['long_map_frac_gte50cov'] = 'N/A'
+    stats['long_map_frac_gte100cov'] = 'N/A'
+    stats['long_map_frac_gte1000cov'] = 'N/A'
+
+    import pysam
+
+    base = Path(f'./{results_dir}/{sample}')
+
+    inf = base / 'ref_mapping' / 'mabs' / 'longmerged.sorted.bam'
+    try:
+        sam = pysam.AlignmentFile(inf, "rb")
+        stats['long_map_mapped_reads'] = sam.count()
+        stats['long_map_ref_bases'] = sum(sam.lengths)
+    except Exception:
+        print("Problem opening file: {}".format(inf), file=sys.stderr)
+        return stats
+
+    inf = base / 'ref_mapping' / 'mabs' / 'longmerged.sorted.depth.gz'
+    try:
+        depths = [line.strip().split('\t') for line in gzip.open(inf, 'rt')]
+    except Exception:
+        print("Problem opening file: {}".format(inf), file=sys.stderr)
+        return stats
+
+    cov = [int(item[-1]) for item in depths]
+
+    # median coverage
+    stats['long_map_bases_0cov'] = len([i for i in cov if i < 1])
+    stats['long_map_bases_gte1cov'] = len([i for i in cov if i > 1])
+    stats['long_map_bases_gte50cov'] = len([i for i in cov if i > 50])
+    stats['long_map_bases_gte100cov'] = len([i for i in cov if i > 100])
+    stats['long_map_bases_gte1000cov'] = len([i for i in cov if i > 1000])
+    stats['long_map_frac_0cov'] = \
+        stats['long_map_bases_0cov'] / stats['long_map_ref_bases']
+    stats['long_map_frac_gte1cov'] = \
+        stats['long_map_bases_gte1cov'] / stats['long_map_ref_bases']
+    stats['long_map_frac_gte50cov'] = \
+        stats['long_map_bases_gte50cov'] / stats['long_map_ref_bases']
+    stats['long_map_frac_gte100cov'] = \
+        stats['long_map_bases_gte100cov'] / stats['long_map_ref_bases']
+    stats['long_map_frac_gte1000cov'] = \
+        stats['long_map_bases_gte1000cov'] / stats['long_map_ref_bases']
+    stats['long_map_median_cov'] = np.median(cov)
+
+    # pprint.pprint(stats['map'])
+    return stats
 
 def MRCA(sample, stats):
     results_dir = stats['results_dir']
@@ -563,6 +615,23 @@ def MRCA(sample, stats):
     try:
         data = [l.strip().split(',') for l in open(inf, 'r')]
         stats['MRCA_ref'] = data[0]
+    except Exception:
+        print("Problem opening file: {}".format(inf), file=sys.stderr)
+        return stats
+
+    return stats
+
+
+def long_MRCA(sample, stats):
+    results_dir = stats['results_dir']
+    stats['MRCA_long_ref'] = 'N/A'
+
+    base = Path(f'./{results_dir}/{sample}')
+
+    inf = base / f'{sample}.long.MRCA.csv'
+    try:
+        data = [l.strip().split(',') for l in open(inf, 'r')]
+        stats['MRCA_long_ref'] = data[0]
     except Exception:
         print("Problem opening file: {}".format(inf), file=sys.stderr)
         return stats
@@ -604,6 +673,40 @@ def MLST(sample, stats):
     return stats
 
 
+def MLST_long(sample, stats):
+    results_dir = stats['results_dir']
+    stats['pubMLST_long_scheme'] = 'N/A'
+    stats['pubMLST_long_ST'] = 'N/A'
+    stats['pubMLST_long_allele1'] = 'N/A'
+    stats['pubMLST_long_allele2'] = 'N/A'
+    stats['pubMLST_long_allele3'] = 'N/A'
+    stats['pubMLST_long_allele4'] = 'N/A'
+    stats['pubMLST_long_allele5'] = 'N/A'
+    stats['pubMLST_long_allele6'] = 'N/A'
+    stats['pubMLST_long_allele7'] = 'N/A'
+
+    base = Path(f'./{results_dir}/{sample}')
+
+    inf = base / f'{sample}.long.MLST.csv'
+    try:
+        data = [l.strip().split("\t") for l in open(inf, 'r')]
+        stats['pubMLST_long_scheme'] = data[0][1]
+        stats['pubMLST_long_ST'] = data[0][2]
+        stats['pubMLST_long_allele1'] = data[0][3]
+        stats['pubMLST_long_allele2'] = data[0][4]
+        stats['pubMLST_long_allele3'] = data[0][5]
+        stats['pubMLST_long_allele4'] = data[0][6]
+        stats['pubMLST_long_allele5'] = data[0][7]
+        stats['pubMLST_long_allele6'] = data[0][8]
+        stats['pubMLST_long_allele7'] = data[0][9]
+
+    except Exception:
+        print("Problem opening file: {}".format(inf), file=sys.stderr)
+        return stats
+
+    return stats
+
+
 def erm41(sample, stats):
     results_dir = stats['results_dir']
     stats['erm(41)_contig'] = 'N/A'
@@ -628,6 +731,37 @@ def erm41(sample, stats):
         stats['erm(41)_query_end'] = data[0][5]
         stats['erm(41)_subject_start'] = data[0][6]
         stats['erm(41)_subject_end'] = data[0][7]
+
+    except Exception:
+        print("Problem opening file: {}".format(inf), file=sys.stderr)
+        return stats
+    return stats
+
+
+def erm41_long(sample, stats):
+    results_dir = stats['results_dir']
+    stats['erm(41)_long_contig'] = 'N/A'
+    stats['erm(41)_long_perc_id'] = 'N/A'
+    stats['erm(41)_long_hit_length'] = 'N/A'
+    stats['erm(41)_long_gaps'] = 'N/A'
+    stats['erm(41)_long_query_start'] = 'N/A'
+    stats['erm(41)_long_query_end'] = 'N/A'
+    stats['erm(41)_long_subject_start'] = 'N/A'
+    stats['erm(41)_long_subject_end'] = 'N/A'
+
+    base = Path(f'./{results_dir}/{sample}')
+
+    inf = base / f'{sample}.long.erm41.status'
+    try:
+        data = [l.strip().split("\t") for l in open(inf, 'r')]
+        stats['erm(41)_long_contig'] = data[0][0]
+        stats['erm(41)_long_perc_id'] = data[0][1]
+        stats['erm(41)_long_hit_length'] = data[0][2]
+        stats['erm(41)_long_gaps'] = data[0][3]
+        stats['erm(41)_long_query_start'] = data[0][4]
+        stats['erm(41)_long_query_end'] = data[0][5]
+        stats['erm(41)_long_subject_start'] = data[0][6]
+        stats['erm(41)_long_subject_end'] = data[0][7]
 
     except Exception:
         print("Problem opening file: {}".format(inf), file=sys.stderr)
@@ -663,13 +797,17 @@ def main():
     stats = mapping(sample_name, stats)
     print('  finished mapping QC stats...', file=sys.stderr)
     stats = MLST(sample_name, stats)
+    stats = MLST_long(sample_name, stats)
     stats = MRCA(sample_name, stats)
+    stats = long_MRCA(sample_name, stats)
     stats = erm41(sample_name, stats)
+    stats = erm41_long(sample_name, stats)
 
     df = pd.DataFrame(
         stats, columns=stats.keys(), index=[sample_name],
     )
     print(df.to_csv())
+
 
 if __name__ == '__main__':
     main()
