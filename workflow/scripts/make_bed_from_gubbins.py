@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-
 import os
-import pathlib
 import sys
 from Bio import SeqIO
 
@@ -18,19 +16,22 @@ def main():
         ),
         file=sys.stderr
     )
+    assert os.path.exists(sys.argv[3]), exit(
+        f"sentinel {sys.argv[3]} not found"
+    )
 
     try:
         lines = open(embl, 'r').readlines()
-        lines = [l.strip() for l in lines if 'misc_feature' in l]
-        lines =[l.split(' ')[-1].split('.') for l in lines]
+        lines = [ln.strip() for ln in lines if 'misc_feature' in ln]
+        lines = [ln.split(' ')[-1].split('.') for ln in lines]
         print("Found: {}".format(embl), file=sys.stderr)
     except FileNotFoundError:
-        print("Not Found: {} -- blank bed".format(infile), file=sys.stderr)
+        print("Not Found: {} -- blank bed".format(embl), file=sys.stderr)
         lines = []
 
-    for l in lines:
+    for ln in lines:
         print('{}\t{}\t{}\tgubbins'.format(
-            id, l[0], l[-1]
+            id, ln[0], ln[-1]
         ))
 
 

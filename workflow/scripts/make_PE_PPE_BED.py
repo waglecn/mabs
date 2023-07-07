@@ -57,6 +57,11 @@ for r in records:
                     label.append('PPE_IPR000030')
                 if 'IPR000084' in db_xref:
                     label.append('PE_IPR000084')
+        if 'product' in c.qualifiers and (
+            'PE family protein' in c.qualifiers['product'] or
+            'PPE family protein' in c.qualifiers['product']
+        ):
+            label.append("".join(c.qualifiers['product']))
         if len(label) > 0:
             print('{}\t{}\t{}\t{}'.format(
                 r.id, c.location.start - 1, c.location.end, ','.join(label)

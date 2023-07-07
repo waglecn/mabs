@@ -11,9 +11,6 @@ INPUT:
 OUTPUT:
     FILE: output.bed - a BED format file indicating positions which need to be
                         filtered out
-
-note: as of 20-11-09 this is not working and needs more development
-
 """
 import sys
 import vcf
