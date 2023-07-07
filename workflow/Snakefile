@@ -48,7 +48,9 @@ both_samples = [
 ]
 # sample_names = list(sample_names)[:20]
 print("short samples:", short_sample_names, file=sys.stderr)
+print("short only samples:", short_only_sample_names, file=sys.stderr)
 print("long samples:", long_sample_names, file=sys.stderr)
+print("long only samples:", long_only_sample_names, file=sys.stderr)
 print("both sample names:", both_samples, file=sys.stderr)
 
 filt_short_samples = list(short_sample_names)
@@ -93,7 +95,7 @@ include: "stage1.smk"
 include: "stage2_short.smk"
 include: "stage2_long.smk"
 # # variant counting
-# include: "stage3_short.smk"
+include: "stage3_short_andor_long.smk"
 # include: "stage3_long.smk"
 # include: "SNP_counts.smk"
 
@@ -161,7 +163,7 @@ rule stage1_all_outputs:
             sample=short_sample_names,
         ),
         expand(
-            "{res}/{sample}/dflye/contigs.fa",
+            "{res}/{sample}/dflye/{sample}.dflye.contigs.fa",
             res=res,
             sample=long_sample_names,
         ),
@@ -327,7 +329,8 @@ rule stage2_short:
                 res=res, ref=ref_from_QC(s, f"{res}/QC_summary.csv"),
                 sample=s
             ) for s in filt_short_samples
-        ]
+        ],
+        
 
 rule stage2_long:
     input:
@@ -408,38 +411,216 @@ rule stage2_long:
             ) for s in filt_long_samples
         ],
 
-gubbins_output = []
-gubbins = ['nogubbins']
-# TODO: this needs to be per-reference, ie a reference has to have at least 3
-# isolates assigned to it in order to be eligible for gubbins, otherwise
-# skip gubbins
-if len(list(set(list(filt_short_samples + filt_long_samples)))) >= 3:
-    gubbins_output += expand(
-        "{res}/gubbins/{ref}.gubbins.done",
-        res=res,
-        ref=(
-            ref_from_QC(s, f"{res}/QC_summary.csv")  for s in 
-            filt_short_samples + filt_long_samples
-        )
-    )
-    gubbins_output += expand(
-        "{res}/gubbins/{ref}.gubbins.bed",
-        res=res,
-        ref=(
-            ref_from_QC(s, f"{res}/QC_summary.csv") for s in 
-            filt_short_samples + filt_long_samples
-        )
-    )
-    gubbins_output += expand(
-        "{res}/MRCA_ref_mapping/{ref}/merge.gubbins.vcf.gz",
-        res=res,
-        ref=(
-            ref_from_QC(s, f"{res}/QC_summary.csv") for s in 
-            filt_short_samples + filt_long_samples
-        )
-    ),
-    gubbins += ['gubbins']
+# gubbins_output = []
+# gubbins = ['nogubbins']
+# # TODO: this needs to be per-reference, ie a reference has to have at least 3
+# # isolates assigned to it in order to be eligible for gubbins, otherwise
+# # skip gubbins
+# if len(list(set(list(filt_short_samples + filt_long_samples)))) >= 3:
+#     gubbins_output += expand(
+#         "{res}/gubbins/{ref}.gubbins.done",
+#         res=res,
+#         ref=(
+#             ref_from_QC(s, f"{res}/QC_summary.csv")  for s in 
+#             filt_short_samples + filt_long_samples
+#         )
+#     )
+#     gubbins_output += expand(
+#         "{res}/gubbins/{ref}.gubbins.bed",
+#         res=res,
+#         ref=(
+#             ref_from_QC(s, f"{res}/QC_summary.csv") for s in 
+#             filt_short_samples + filt_long_samples
+#         )
+#     )
+#     gubbins_output += expand(
+#         "{res}/MRCA_ref_mapping/{ref}/merge.gubbins.vcf.gz",
+#         res=res,
+#         ref=(
+#             ref_from_QC(s, f"{res}/QC_summary.csv") for s in 
+#             filt_short_samples + filt_long_samples
+#         )
+#     ),
+#     gubbins += ['gubbins']
 
+rule stage3_short_only:
+    input:
+        expand(
+            "{res}/gubbins/{ref}.RG_SC.short_only.fasta",
+            res=res, ref=[
+                r for r in config['mash_ref_taxa'] if 
+                r in [
+                    ref_from_QC(s, f"{res}/QC_summary.csv") for
+                    s in filt_short_samples
+                ]
+            ]
+        ),
+        expand(
+            "{res}/gubbins/{ref}.RG_SC.short_only.gubbins.done",
+            res=res, ref=[
+                r for r in config['mash_ref_taxa'] if
+                r in [
+                    ref_from_QC(s, f"{res}/QC_summary.csv") for
+                    s in filt_short_samples
+                ]
+            ]
+        ),
+        expand(
+            "{res}/gubbins/{ref}.RG_SC.short_only.gubbins.bed",
+            res=res, ref=[
+                r for r in config['mash_ref_taxa'] if
+                r in [
+                    ref_from_QC(s, f"{res}/QC_summary.csv") for
+                    s in filt_short_samples
+                ]
+            ]
+        ),
+        [
+            "{res}/{s}/MRCA_ref_mapping/{ref}/"
+            "RG_SC.short_only.combined.bed".format(
+                res=res, s=s, ref=ref_from_QC(s, f"{res}/QC_summary.csv")
+            ) for s in filt_short_samples 
+        ],
+        # combined short_only masked consensus fasta per sample per reference
+        [
+            "{res}/{s}/MRCA_ref_mapping/{ref}/"
+            "RG_SC.short_only.combined.consensus.fasta".format(
+                res=res, s=s, ref=ref_from_QC(s, f"{res}/QC_summary.csv")
+            ) for s in filt_short_samples 
+        ],
+        expand(
+            "{res}/SNP_phylo/{ref}.RG_SC.short_only.consensus.fasta",
+            res=res, ref=[
+                r for r in config['mash_ref_taxa'] if
+                r in [
+                    ref_from_QC(s, f"{res}/QC_summary.csv") for
+                    s in filt_short_samples
+                ]
+            ]
+        ),
+        expand(
+            "{res}/SNP_phylo/{ref}.RG_SC.short_only.consensus.fasta.treefile",
+            res=res, ref=[
+                r for r in config['mash_ref_taxa'] if
+                r in [
+                    ref_from_QC(s, f"{res}/QC_summary.csv") for
+                    s in filt_short_samples
+                ]
+            ]
+        ),
+        expand(
+            "{res}/SNP_phylo/{ref}.RG_SC.short_only.consensus.fasta.snpdists.csv",
+            res=res, ref=[
+                r for r in config['mash_ref_taxa'] if
+                r in [
+                    ref_from_QC(s, f"{res}/QC_summary.csv") for
+                    s in filt_short_samples
+                ]
+            ]
+        ),
+
+
+rule stage3_short_long:
+    input:
+        expand(
+            "{res}/gubbins/{ref}.RG_SC.short_long.fasta",
+            res=res, ref=[
+                r for r in config['mash_ref_taxa'] if
+                r in [
+                    ref_from_QC(s, f"{res}/QC_summary.csv") for
+                    s in filt_short_samples
+                ] + [
+                    ref_from_QC(s, f"{res}/QC_summary.csv", "long") for
+                    s in filt_long_samples
+                ]
+            ]
+        ),
+        expand(
+            "{res}/gubbins/{ref}.RG_SC.short_long.gubbins.done",
+            res=res, ref=[
+                r for r in config['mash_ref_taxa'] if
+                r in [
+                    ref_from_QC(s, f"{res}/QC_summary.csv") for
+                    s in filt_short_samples
+                ] + [
+                    ref_from_QC(s, f"{res}/QC_summary.csv", "long") for
+                    s in filt_long_samples
+                ]
+            ]
+        ),
+        expand(
+            "{res}/gubbins/{ref}.RG_SC.short_long.gubbins.bed",
+            res=res, ref=[
+                r for r in config['mash_ref_taxa'] if
+                r in [
+                    ref_from_QC(s, f"{res}/QC_summary.csv") for
+                    s in filt_short_samples
+                ] + [
+                    ref_from_QC(s, f"{res}/QC_summary.csv", "long") for
+                    s in filt_long_samples
+                ]
+            ]
+        ),
+        [
+            "{res}/{s}/MRCA_ref_mapping/{ref}/RG_SC.short_long.combined.bed".format(
+                res=res, s=s, ref=ref_from_QC(s, f"{res}/QC_summary.csv")
+            ) for s in filt_short_samples 
+        ] + [
+            "{res}/{s}/MRCA_ref_mapping/{ref}/RG_SC.short_long.long.combined.bed".format(
+                res=res, s=s, ref=ref_from_QC(s, f"{res}/QC_summary.csv", "long")
+            ) for s in filt_long_samples 
+        ],
+        # short_long combined consensus fasta per sample per reference
+        [
+            "{res}/{s}/MRCA_ref_mapping/{ref}/"
+            "RG_SC.short_long.combined.consensus.fasta".format(
+                res=res, s=s, ref=ref_from_QC(s, f"{res}/QC_summary.csv")
+            ) for s in filt_short_samples 
+        ] + [
+            "{res}/{s}/MRCA_ref_mapping/{ref}/"
+            "RG_SC.short_long.long.combined.consensus.fasta".format(
+                res=res, s=s, ref=ref_from_QC(s, f"{res}/QC_summary.csv", "long")
+            ) for s in filt_long_samples 
+        ],
+        expand(
+            "{res}/SNP_phylo/{ref}.RG_SC.short_long.consensus.fasta",
+            res=res, ref=[
+                r for r in config['mash_ref_taxa'] if
+                r in [
+                    ref_from_QC(s, f"{res}/QC_summary.csv") for
+                    s in filt_short_samples
+                ] + [
+                    ref_from_QC(s, f"{res}/QC_summary.csv", "long") for
+                    s in filt_long_samples
+                ]
+            ]
+        ),
+        expand(
+            "{res}/SNP_phylo/{ref}.RG_SC.short_long.consensus.fasta.treefile",
+            res=res, ref=[
+                r for r in config['mash_ref_taxa'] if
+                r in [
+                    ref_from_QC(s, f"{res}/QC_summary.csv") for
+                    s in filt_short_samples
+                ] + [
+                    ref_from_QC(s, f"{res}/QC_summary.csv", "long") for
+                    s in filt_long_samples
+                ]
+            ]
+        ),
+        expand(
+            "{res}/SNP_phylo/{ref}.RG_SC.short_long.consensus.fasta.snpdists.csv",
+            res=res, ref=[
+                r for r in config['mash_ref_taxa'] if
+                r in [
+                    ref_from_QC(s, f"{res}/QC_summary.csv") for
+                    s in filt_short_samples
+                ] + [
+                    ref_from_QC(s, f"{res}/QC_summary.csv", "long") for
+                    s in filt_long_samples
+                ]
+            ]
+        ),
 
 # rule stage3:
 #     input:

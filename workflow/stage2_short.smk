@@ -92,14 +92,14 @@ rule short_MRCA_call_and_filter_variants:
     conda:
         "envs/bwa.yaml"
     input:
-        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}.mpileup"
+        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step}}.mpileup"
     output:
         f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}_filter.vcf.gz"
     shell:
         # -Ov output uncompressed vcf
         # -m multiallelic caller
         # -v variants only
-        "bcftools call --ploidy 1 -Ov -m -v --ploidy 1 {input} | "
+        "bcftools call --ploidy 1 -Ov -m -v {input} | "
         # filtering
         # MQ mapping quality
         # ID-SP - Phred-scaled strand bias p-value
@@ -112,15 +112,16 @@ rule short_MRCA_call_and_filter_variants:
         # Note need to specify sample 0:
         # see https://github.com/samtools/bcftools/issues/757
         "bcftools filter -i 'SP<45 & ADF[0:1]>1 & ADR[0:1]>1 & MQ>30 & "
-        "QUAL>50 & FORMAT/DP > 10 & SP<45 & ADF[0:1]>1 & ADR[0:1]>1' "
-        "-Oz -o {output}"
+        "QUAL>50 & FORMAT/DP > 10 & SP<45 & ADF[0:1]>1 & ADR[0:1]>1' | "
+        "bcftools norm -f workflow/resources/alignment_references/{wildcards.ref}.fasta "
+        "- -Oz -o {output}"
 
 rule short_MRCA_inverse_filter:
     threads: 1
     conda:
         "envs/bwa.yaml"
     input:
-        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}.mpileup"
+        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step}}.mpileup"
     output:
         f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}_filter.failed.vcf.gz"
     shell:
@@ -133,7 +134,7 @@ rule short_MRCA_inverse_AD_filter:
     conda:
         "envs/bwa.yaml"
     input:
-        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}.mpileup"
+        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step}}.mpileup"
     output:
         f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}_filter.AD_failed.vcf.gz"
     params:
@@ -151,7 +152,7 @@ rule short_filter_hsnps:
     params:
         snp_cutoff = 0.90
     input:
-        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}_filter.vcf.gz"
+        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step}}_filter.vcf.gz"
     output:
         f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}_filter.hvar.vcf.gz"
     shell:
@@ -164,7 +165,7 @@ rule short_make_bed_0cov:
     conda:
         "envs/bwa.yaml"
     input:
-        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}.merged.sorted.bam"
+        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step}}.merged.sorted.bam"
     output:
         f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}.0cov.bed"
     shell:
@@ -175,7 +176,7 @@ rule short_make_bed_lowcov:
     conda:
         "envs/bwa.yaml"
     input:
-        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}.merged.sorted.bam"
+        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step}}.merged.sorted.bam"
     output:
         f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}.lowcov.bed"
     shell:
@@ -186,19 +187,21 @@ rule short_make_variants_bed:
     conda:
         "envs/bwa.yaml"
     input:
-        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}_filter.hvar.vcf.gz"
+        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step}}_filter.hvar.vcf.gz"
     output:
         f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}.variants.bed"
     shell:
         "bcftools query -f'%CHROM\t%POS0\t%END\n' {input} > {output}"
 
+
+# see https://github.com/samtools/bcftools/issues/1386
 rule short_make_mask_bed:
     threads: 1
     conda:
         "envs/bwa.yaml"
     input:
-        varbed=f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}.variants.bed",
-        lowbed=f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}.lowcov.bed"
+        varbed=f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step}}.variants.bed",
+        lowbed=f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step}}.lowcov.bed"
     output:
         f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}.mask.bed"
     shell:
@@ -210,15 +213,15 @@ rule short_make_simple_consensus:
         "envs/bwa.yaml"
     input:
         ref = "workflow/resources/alignment_references/{ref}.fasta",
-        vcf = f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}_filter.hvar.vcf.gz",
-        ids = f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}_filter.hvar.vcf.gz.csi",
-        mask = f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}.mask.bed"
+        vcf = f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step}}_filter.hvar.vcf.gz",
+        ids = f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step}}_filter.hvar.vcf.gz.csi",
+        mask = f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step}}.mask.bed"
     output:
         f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}.consensus.fa"
     shell:
         f"bcftools consensus -p {{wildcards.sample}} "
         "-f {input.ref} --mark-del '-' "
-        "-m {input.mask} -i 'INFO/MQ >= 20 & FORMAT/DP >= 10' {input.vcf} | "
+        "-m {input.mask} -i 'strlen(REF)>=strlen(ALT) & INFO/MQ >= 20 & FORMAT/DP >= 10' {input.vcf} | "
         "sed \"/^>/s/{wildcards.sample}.*/{wildcards.sample}/\" > {output}"
 
 rule short_density_filter_bed:
@@ -226,11 +229,10 @@ rule short_density_filter_bed:
     conda:
         "envs/bwa.yaml"
     input:
-        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}_filter.hvar.vcf.gz",
-        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}_filter.hvar.vcf.gz.csi"
+        vcf = f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step}}_filter.hvar.vcf.gz",
+        csi = f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step}}_filter.hvar.vcf.gz.csi"
     output:
         bed = f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}_filter.hvar_DF.bed"
     shell:
-        "workflow/scripts/make_vcf_density_bed.py {input} > {output.bed}"
-
+        "workflow/scripts/make_vcf_density_bed.py {input.vcf} > {output.bed}"
 

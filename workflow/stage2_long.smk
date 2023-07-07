@@ -79,7 +79,7 @@ rule long_MRCA_call_and_filter_variants:
         # -Ov output uncompressed vcf
         # -m multiallelic caller
         # -v variants only
-        "bcftools call -P 0.01 --ploidy 1 -Ov -m -v --ploidy 1 {input} | "
+        "bcftools call -P 0.01 --ploidy 1 -Ov -m -v {input} | "
         # filtering
         # MQ mapping quality
         # ID-SP - Phred-scaled strand bias p-value
@@ -92,8 +92,9 @@ rule long_MRCA_call_and_filter_variants:
         # Note need to specify sample 0:
         # see https://github.com/samtools/bcftools/issues/757
         "bcftools filter -i 'SP<45 & ADF[0:1]>1 & ADR[0:1]>1 & MQ>30 & "
-        "QUAL>50 & FORMAT/DP > 10 & SP<45 & ADF[0:1]>1 & ADR[0:1]>1' "
-        "-Oz -o {output}"
+        "QUAL>50 & FORMAT/DP > 10 & SP<45 & ADF[0:1]>1 & ADR[0:1]>1' | "
+        "bcftools norm -f workflow/resources/alignment_references/{wildcards.ref}.fasta "
+        "- -Oz -o {output}"
 
 rule long_MRCA_inverse_filter:
     threads: 1
@@ -171,7 +172,7 @@ rule long_make_variants_bed:
     output:
         f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}.long.variants.bed"
     shell:
-        "bcftools query -f'%CHROM\t%POS0\t%END\n' {input} > {output}"
+        "bcftools query -f'%CHROM\t%POS0\t%END\t%REF->%ALT\n' {input} > {output}"
 
 rule long_make_mask_bed:
     threads: 1
@@ -199,7 +200,7 @@ rule long_make_simple_consensus:
     shell:
         f"bcftools consensus -p {{wildcards.sample}} "
         "-f {input.ref} --mark-del '-' "
-        "-m {input.mask} -i 'INFO/MQ >= 20 & FORMAT/DP >= 10' {input.vcf} | "
+        "-m {input.mask} -i 'strlen(REF)>=strlen(ALT) & INFO/MQ >= 20 & FORMAT/DP >= 10' {input.vcf} | "
         "sed \"/^>/s/{wildcards.sample}.*/{wildcards.sample}/\" > {output}"
 
 rule long_density_filter_bed:

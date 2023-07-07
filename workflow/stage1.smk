@@ -309,7 +309,7 @@ rule kraken2_contamination_long_assembly:
     conda:
         "envs/kraken2.yaml"
     input:
-        f"{res}/{{sample}}/dflye/contigs.fa"
+        f"{res}/{{sample}}/dflye/{{sample}}.dflye.contigs.fa"
     output:
         report = f"{res}/{{sample}}/dflye/dflye.assembly"
     params:
@@ -343,7 +343,7 @@ rule assembly_status_erm41_long:
     conda:
         "envs/blast.yaml"
     input:
-        f"{res}/{{sample}}/dflye/contigs.fa"
+        f"{res}/{{sample}}/dflye/{{sample}}.dflye.contigs.fa"
     output:
         f"{res}/{{sample}}/{{sample}}.long.erm41.status"
     params:
@@ -525,7 +525,7 @@ rule MRCA_long_MLST:
         "envs/ngd_phylo.yaml"
     input:
         tree = f"{res}/mashtree/assembly_mashtree.complete.tree",
-        assembly = f"{res}/{{sample}}/dflye/contigs.fa"
+        assembly = f"{res}/{{sample}}/dflye/{{sample}}.dflye.contigs.fa"
     output:
         f"{res}/{{sample}}/{{sample}}.long.MLST.csv"
     shell:
@@ -555,7 +555,7 @@ def QC_input(wildcards):
         outf['mabs_depth'] = f"{res}/{wildcards.sample}/ref_mapping/mabs/merged.sorted.depth.gz",
     if wildcards.sample in long_sample_names:
         outf['long_fastqc'] = f"{res}/{wildcards.sample}/input/long_fastqc.data.txt",
-        outf['long_assembly'] = f"{res}/{wildcards.sample}/dflye/contigs.fa",
+        outf['long_assembly'] = f"{res}/{wildcards.sample}/dflye/{wildcards.sample}.dflye.contigs.fa",
         outf['MRCA_long'] = f"{res}/{wildcards.sample}/{wildcards.sample}.long.MRCA.csv",
         outf['MLST_long'] = f"{res}/{wildcards.sample}/{wildcards.sample}.long.MLST.csv",
         outf['erm41_long'] = f"{res}/{wildcards.sample}/{wildcards.sample}.long.erm41.status",
@@ -593,7 +593,7 @@ rule prokka_annotate_dflye:
             wildcards.sample, f"{res}/QC_summary.csv"
         )
     input:
-        f"{res}/{{sample}}/{{dflye}}/contigs.fa",
+        f"{res}/{{sample}}/dflye/{{sample}}.dflye.contigs.fa",
         f"{res}/QC_summary.csv"
     output:
         f"{res}/{{sample}}/{{sample}}.{{dflye}}.prokka.gff"
