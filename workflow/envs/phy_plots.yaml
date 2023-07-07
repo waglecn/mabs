@@ -1,3 +1,4 @@
+name: phy_plots
 channels:
   - conda-forge
   - bioconda
@@ -15,3 +16,4 @@ dependencies:
   - xlrd=1.2.0
   - bioconda::pysam
   - bioconda::samtools
+  - bioconda::bedtools=2.30.0
