@@ -102,7 +102,6 @@ include: "stage3_short_andor_long.smk"
 rule all:
 # Rule "all" default catches output of other rules as input in order to
 # simplify running the workflow
-# - add target rules here as they are implemented
 
 rule stage1:
     input:

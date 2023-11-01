@@ -212,6 +212,9 @@ rule kraken2_contamination_single:
         "--gzip-compressed {input.S1} {input.S2} "
         "--report {output.report} --output - 2>&1 | tee {log}"
 
+# ===========================================================================
+# Assembly steps
+# ===========================================================================
 # Produces a basic assembly using raw reads for MRCA and species typing
 rule shovill_assembly:
     threads: 4
@@ -419,7 +422,7 @@ rule depth_map_to_mabs:
         "workflow/resources/alignment_references/mabcessus.fasta | gzip > "
         "{output.depth} "
 
-rule long_depth_map_to_maps:
+rule long_depth_map_to_mabs:
     threads: 1
     conda:
         "envs/bwa.yaml"

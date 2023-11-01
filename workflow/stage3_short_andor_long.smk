@@ -148,11 +148,12 @@ rule concatenate_short_only_consensus:
                 res=res, s=s, ref=ref_from_QC(s, f"{res}/QC_summary.csv")
             ) for s in filt_short_samples if 
                 ref_from_QC(s, f"{res}/QC_summary.csv") == wildcards.ref
-        ]
+        ],
+        ref = "workflow/resources/alignment_references/{ref}.fasta"
     output:
         f"{res}/SNP_phylo/{{ref}}.{{step}}.short_only.consensus.fasta"
     shell:
-        "cat {input.short} > {output}"
+        "cat {input.ref} {input.short} > {output}"
 
 rule concatenate_short_long_consensus:
     conda:
@@ -177,7 +178,8 @@ rule concatenate_short_long_consensus:
                 ref_from_QC(
                     s, f"{res}/QC_summary.csv", "long"
                 ) == wildcards.ref
-        ]
+        ],
+        "workflow/resources/alignment_references/{ref}.fasta"
     output:
         f"{res}/SNP_phylo/{{ref}}.{{step}}.short_long.consensus.fasta",
     shell:
