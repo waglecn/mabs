@@ -35,6 +35,160 @@ def input_files(sample_name, read):
         ), file=sys.stderr)
     return reads
 
+# ===================================
+# for testing stage 1
+# ===================================
+rule stage1_all_outputs:
+    input:
+        # merged short samples
+        expand(
+            "{res}/samples/{s}/input/{R}.fastq.gz",
+            res=res,
+            s=short_sample_names,
+            R=["R1", "R2"]
+        ),
+        # merged long samples
+        expand(
+            "{res}/samples/{s}/input/long.fastq.gz",
+            res=res,
+            s=long_sample_names, R=['MINION']
+        ),
+        # pre-trim QC
+        expand(
+            "{res}/samples/{s}/input/{R}_fastqc.html",
+            res=res,
+            s=short_sample_names,
+            R=["R1", "R2"],
+        ),
+        # # trimmed input
+        expand(
+            "{res}/samples/{s}/input/{read}.trim.fastq.gz",
+            res=res,
+            s=short_sample_names,
+            read=["R1", "R2", "S1", "S2"],
+        ),
+        # # post-trim QC
+        expand(
+            "{res}/samples/{s}/input/{read}.trim_fastqc.data.txt",
+            res=res,
+            s=short_sample_names,
+            read=["R1", "R2", "S1", "S2"],
+        ),
+        expand(
+            "{res}/samples/{s}/input/{read}_fastqc.data.txt",
+            res=res,
+            s=short_sample_names,
+            read=["R1", "R2"],
+        ),
+        expand(
+            "{res}/samples/{s}/input/long_fastqc.data.txt",
+            res=res,
+            s=long_sample_names,
+        ),
+        # # Kraken contamination, paired and single
+        expand(
+            "{res}/samples/{s}/input/kraken.trimmed.paired",
+            res=res,
+            s=short_sample_names,
+        ),
+        expand(
+            "{res}/samples/{s}/input/kraken.trimmed.single",
+            res=res,
+            s=short_sample_names,
+        ),
+        # assembly with shovill
+        expand(
+            "{res}/samples/{s}/shovill_assembly/{s}.shovill.contigs.fa",
+            res=res,
+            s=short_sample_names,
+        ),
+        expand(
+            "{res}/samples/{s}/dflye/{s}.dflye.contigs.fa",
+            res=res,
+            s=long_sample_names,
+        ),
+        expand(
+            "{res}/samples/{s}/dflye_short_polish/{s}.polish.contigs.fa",
+            res=res,
+            s=both_samples,
+        ),
+        # kraken2 the illumina assembly
+        expand(
+            "{res}/samples/{s}/shovill_assembly/kraken.assembly",
+            res=res,
+            s=short_sample_names,
+        ),
+        # kraken2 the long_only assembly
+        expand(
+            "{res}/samples/{s}/dflye/dflye.assembly",
+            res=res,
+            s=long_sample_names,
+        ),
+        # MRCA ref per illumina sample
+        expand(
+            "{res}/samples/{s}/{s}.MRCA.csv",
+            res=res,
+            s=short_sample_names,
+        ),
+        # MRCA ref per long sample
+        expand(
+            "{res}/samples/{s}/{s}.long.MRCA.csv",
+            res=res,
+            s=long_only_sample_names,
+        ),
+        # MLST ref per illumina sample
+        expand(
+            "{res}/samples/{s}/{s}.MLST.csv",
+            res=res,
+            s=short_sample_names,
+        ),
+         # MLST ref per long_only sample
+        expand(
+            "{res}/samples/{s}/{s}.long.MLST.csv",
+            res=res,
+            s=long_sample_names,
+        ),
+        # determine the basic Erm(41) status with TBLASTN in short sample
+        expand(
+             "{res}/samples/{s}/{s}.erm41.status",
+             res=res,
+             s=short_sample_names,
+        ),
+        # determine the basec Erm(41) satus with TBLASTN in long samples
+        expand(
+            "{res}/samples/{s}/{s}.long.erm41.status",
+            res=res,
+            s=long_sample_names,
+        ),
+        expand(
+            "{res}/samples/{s}/ref_mapping/mabs/merged.sorted.bam",
+            res=res, s=short_sample_names,
+        ),
+        expand(
+            "{res}/samples/{s}/ref_mapping/mabs/merged.sorted.depth.gz",
+            res=res, s=short_sample_names,
+        ),
+        expand(
+            "{res}/samples/{s}/ref_mapping/mabs/longmerged.sorted.bam",
+            res=res, s=long_sample_names,
+        ),
+        expand(
+            "{res}/samples/{s}/ref_mapping/mabs/longmerged.sorted.depth.gz",
+            res=res, s=long_sample_names,
+        ),
+        expand(
+            "{res}/samples/{s}/{s}.QC.csv",
+            res=res,
+            s=list(set(list(short_sample_names + long_sample_names)))
+        ),
+        f"{res}/mashtree/assembly_mashtree.complete.tree",
+        f"{res}/mashtree/assembly_mashtree.complete.matrix",
+        f"{res}/QC_summary.csv",
+        expand(
+            "{res}/samples/{s}/{s}.{dflye}.prokka.gff",
+            res=res, s=both_samples, dflye="dflye_short_polish"
+        )
+
 ########################################################################
 # Internal Data Rules - PHASE 1
 ########################################################################
@@ -47,7 +201,7 @@ def input_files(sample_name, read):
 rule merge_ill_samples_only:
     input:
         expand(
-            "{res}/{s}/input/{R}.fastq.gz",
+            "{res}/samples/{s}/input/{R}.fastq.gz",
             res=res,
             s=short_sample_names, R=["R1", "R2"]
         )
@@ -55,7 +209,7 @@ rule merge_ill_samples_only:
 rule merge_long_samples_only:
     input:
         expand(
-            "{res}/{s}/input/long.fastq.gz",
+            "{res}/samples/{s}/input/long.fastq.gz",
             res=res,
             s=long_sample_names, R=['MINION']
         )
@@ -64,9 +218,9 @@ rule merge_samples:
     conda:
         "envs/fastqc.yaml"
     input:
-        lambda wildcards: input_files(wildcards.sample, wildcards.R)
+        lambda wildcards: input_files(wildcards.s, wildcards.R)
     output:
-        f"{res}/{{sample}}/input/{{R,\w+}}.fastq.gz",
+        f"{res}/samples/{{s}}/input/{{R,\w+}}.fastq.gz",
     shell:
         "zcat -f {input} | gzip > {output}"
 
@@ -78,17 +232,17 @@ rule pre_trim_QC:
     conda:
         "envs/fastqc.yaml"
     input:
-        f"{res}/{{sample}}/input/{{R}}.fastq.gz",
+        f"{res}/samples/{{s}}/input/{{R}}.fastq.gz",
     output:
-        zipf = f"{res}/{{sample}}/input/{{R}}_fastqc.zip",
-        html = f"{res}/{{sample}}/input/{{R}}_fastqc.html",
-        data = f"{res}/{{sample}}/input/{{R}}_fastqc.data.txt"
+        zipf = f"{res}/samples/{{s}}/input/{{R}}_fastqc.zip",
+        html = f"{res}/samples/{{s}}/input/{{R}}_fastqc.html",
+        data = f"{res}/samples/{{s}}/input/{{R}}_fastqc.data.txt"
     wildcard_constraints:
         R ="R\d"
     shell:
         "fastqc --noextract  -t {threads} "
-        f"-o {res}/{{wildcards.sample}}/input {{input}} ; "
-        f"unzip -p {res}/{{wildcards.sample}}/input/{{wildcards.R}}_fastqc.zip "
+        f"-o {res}/samples/{{wildcards.s}}/input {{input}} ; "
+        f"unzip -p {res}/samples/{{wildcards.s}}/input/{{wildcards.R}}_fastqc.zip "
         f"{{wildcards.R}}_fastqc/fastqc_data.txt > {{output.data}}"
 
 
@@ -98,18 +252,18 @@ rule trim_raw_reads:
         "envs/fastqc.yaml"
     threads: 4
     input:
-        R1 = f"{res}/{{sample}}/input/R1.fastq.gz",
-        R2 = f"{res}/{{sample}}/input/R2.fastq.gz"
+        R1 = f"{res}/samples/{{s}}/input/R1.fastq.gz",
+        R2 = f"{res}/samples/{{s}}/input/R2.fastq.gz"
     output:
-        tR1 = f"{res}/{{sample}}/input/R1.trim.fastq.gz",
-        tR2 = f"{res}/{{sample}}/input/R2.trim.fastq.gz",
-        tS1 = f"{res}/{{sample}}/input/S1.trim.fastq.gz",
-        tS2 = f"{res}/{{sample}}/input/S2.trim.fastq.gz",
+        tR1 = f"{res}/samples/{{s}}/input/R1.trim.fastq.gz",
+        tR2 = f"{res}/samples/{{s}}/input/R2.trim.fastq.gz",
+        tS1 = f"{res}/samples/{{s}}/input/S1.trim.fastq.gz",
+        tS2 = f"{res}/samples/{{s}}/input/S2.trim.fastq.gz",
     params:
         adapters = config['adapters_fasta'],
         min_len = config['QC_min_length']
     log:
-        f"{res}/{{sample}}/input/trimmomatic.log"
+        f"{res}/samples/{{s}}/input/trimmomatic.log"
     shell:
         "trimmomatic PE -phred33 -threads {threads} {input.R1} {input.R2} "
         "{output.tR1} {output.tS1} {output.tR2} {output.tS2} "
@@ -122,17 +276,17 @@ rule post_trim_QC:
     conda:
         "envs/fastqc.yaml"
     input:
-        f"{res}/{{sample}}/input/{{R}}.trim.fastq.gz"
+        f"{res}/samples/{{s}}/input/{{R}}.trim.fastq.gz"
     output:
-        zipf = f"{res}/{{sample}}/input/{{R}}.trim_fastqc.zip",
-        html = f"{res}/{{sample}}/input/{{R}}.trim_fastqc.html",
-        data = f"{res}/{{sample}}/input/{{R}}.trim_fastqc.data.txt"
+        zipf = f"{res}/samples/{{s}}/input/{{R}}.trim_fastqc.zip",
+        html = f"{res}/samples/{{s}}/input/{{R}}.trim_fastqc.html",
+        data = f"{res}/samples/{{s}}/input/{{R}}.trim_fastqc.data.txt"
     wildcard_constraints:
         R = "[RS]\d"
     shell:
         "fastqc --noextract -t {threads} "
-        f"-o {res}/{{wildcards.sample}}/input {{input}} ; "
-        f"unzip -p {res}/{{wildcards.sample}}/input/{{wildcards.R}}.trim_fastqc.zip "
+        f"-o {res}/samples/{{wildcards.s}}/input {{input}} ; "
+        f"unzip -p {res}/samples/{{wildcards.s}}/input/{{wildcards.R}}.trim_fastqc.zip "
         f"{{wildcards.R}}.trim_fastqc/fastqc_data.txt > {{output.data}}"
 
 
@@ -141,15 +295,15 @@ rule pre_nano_QC:
     conda:
         "envs/fastqc.yaml"
     input:
-        f"{res}/{{sample}}/input/long.fastq.gz"
+        f"{res}/samples/{{s}}/input/long.fastq.gz"
     output:
-        zipf = f"{res}/{{sample}}/input/long_fastqc.html",
-        html = f"{res}/{{sample}}/input/long_fastqc.zip",
-        data = f"{res}/{{sample}}/input/long_fastqc.data.txt"
+        zipf = f"{res}/samples/{{s}}/input/long_fastqc.html",
+        html = f"{res}/samples/{{s}}/input/long_fastqc.zip",
+        data = f"{res}/samples/{{s}}/input/long_fastqc.data.txt"
     shell:
         "fastqc --noextract -t {threads} "
-        f"-o {res}/{{wildcards.sample}}/input {{input}} ; "
-        f"unzip -p {res}/{{wildcards.sample}}/input/long_fastqc.zip "
+        f"-o {res}/samples/{{wildcards.s}}/input {{input}} ; "
+        f"unzip -p {res}/samples/{{wildcards.s}}/input/long_fastqc.zip "
         f"long_fastqc/fastqc_data.txt > {{output.data}}"
 
 
@@ -160,14 +314,14 @@ rule kraken2_contamination_raw_paired:
     conda:
         "envs/kraken2.yaml"
     input:
-        R1 = f"{res}/{{sample}}/input/R1.fastq.gz",
-        R2 = f"{res}/{{sample}}/input/R2.fastq.gz"
+        R1 = f"{res}/samples/{{s}}/input/R1.fastq.gz",
+        R2 = f"{res}/samples/{{s}}/input/R2.fastq.gz"
     output:
-        report = f"{res}/{{sample}}/input/kraken.raw.paired",
+        report = f"{res}/samples/{{s}}/input/kraken.raw.paired",
     params:
         kdb = config['kraken_db']
     log:
-        f"{res}/{{sample}}/input/kraken.raw.paired.log"
+        f"{res}/samples/{{s}}/input/kraken.raw.paired.log"
     shell:
         "kraken2 --db {params.kdb} --threads {threads} --quick "
         "--gzip-compressed --paired {input.R1} {input.R2} "
@@ -181,14 +335,14 @@ rule kraken2_contamination_trim_paired:
     conda:
         "envs/kraken2.yaml"
     input:
-        R1 = f"{res}/{{sample}}/input/R1.trim.fastq.gz",
-        R2 = f"{res}/{{sample}}/input/R2.trim.fastq.gz"
+        R1 = f"{res}/samples/{{s}}/input/R1.trim.fastq.gz",
+        R2 = f"{res}/samples/{{s}}/input/R2.trim.fastq.gz"
     output:
-        report = f"{res}/{{sample}}/input/kraken.trimmed.paired",
+        report = f"{res}/samples/{{s}}/input/kraken.trimmed.paired",
     params:
         kdb = config['kraken_db']
     log:
-        f"{res}/{{sample}}/input/kraken.trimmed.paired.log"
+        f"{res}/samples/{{s}}/input/kraken.trimmed.paired.log"
     shell:
         "kraken2 --db {params.kdb} --threads {threads} --quick "
         "--gzip-compressed --paired {input.R1} {input.R2} "
@@ -199,14 +353,14 @@ rule kraken2_contamination_single:
     conda:
         "envs/kraken2.yaml"
     input:
-        S1 = f"{res}/{{sample}}/input/S1.trim.fastq.gz",
-        S2 = f"{res}/{{sample}}/input/S2.trim.fastq.gz"
+        S1 = f"{res}/samples/{{s}}/input/S1.trim.fastq.gz",
+        S2 = f"{res}/samples/{{s}}/input/S2.trim.fastq.gz"
     output:
-        report = f"{res}/{{sample}}/input/kraken.trimmed.single",
+        report = f"{res}/samples/{{s}}/input/kraken.trimmed.single",
     params:
         kdb = config['kraken_db']
     log:
-        f"{res}/{{sample}}/input/kraken.trimmed.single.log"
+        f"{res}/samples/{{s}}/input/kraken.trimmed.single.log"
     shell:
         "kraken2 --db {params.kdb} --threads {threads} --quick "
         "--gzip-compressed {input.S1} {input.S2} "
@@ -221,73 +375,77 @@ rule shovill_assembly:
     conda:
         "envs/shovill.yaml"
     input:
-        R1 = f"{res}/{{sample}}/input/R1.fastq.gz",
-        R2 = f"{res}/{{sample}}/input/R2.fastq.gz"
+        R1 = f"{res}/samples/{{s}}/input/R1.fastq.gz",
+        R2 = f"{res}/samples/{{s}}/input/R2.fastq.gz"
     output:
-        f"{res}/{{sample}}/shovill_assembly/{{sample}}.shovill.contigs.fa",
+        f"{res}/samples/{{s}}/shovill_assembly/{{s}}.shovill.contigs.fa",
     params:
         shovill_tmp = config['shovill_tempdir'],
         shovill_mem = config['shovill_mem']
     log:
-        f"{res}/{{sample}}/shovill_assembly/{{sample}}.shovill.log"
+        f"{res}/samples/{{s}}/shovill_assembly/{{s}}.shovill.log"
     shell:
         # Note: letting Shovill set memory caps at 8, have gotten strange out
         # of memory errors in that pipeline see:
         # <https://github.com/tseemann/shovill/issues/59>
         "shovill --force --cpus {threads} --R1 {input.R1} --R2 {input.R2} "
-        f"--outdir {res}/{{wildcards.sample}}/shovill_assembly "
+        f"--outdir {res}/samples/{{wildcards.s}}/shovill_assembly "
         "--tmpdir {params.shovill_tmp} "
         "--ram {params.shovill_mem} "
         " 2>&1 | tee {log} ; "
-        f"cp {res}/{{wildcards.sample}}/shovill_assembly/contigs.fa {{output}}"
+        f"cp {res}/samples/{{wildcards.s}}/shovill_assembly/contigs.fa {{output}}"
 
 rule dflye_assembly:
-    threads: 8
+    threads: 16 
     conda:
         "envs/dflye.yaml"
     params:
         size = config['dflye_genome_size'],
         medaka = config['_DFLYE_MEDAKA'],
-        racon = config['dflye_racon']
+        racon = config['dflye_racon'],
+        dflye_temp = config['dflye_temp']
     input:
-        f"{res}/{{sample}}/input/long.fastq.gz"
+        f"{res}/samples/{{s}}/input/long.fastq.gz"
     output:
-        f"{res}/{{sample}}/dflye/{{sample}}.dflye.contigs.fa"
+        f"{res}/samples/{{s}}/dflye/{{s}}.dflye.contigs.fa"
     log:
-        f"{res}/{{sample}}/dflye/dflye_assembly.log"
+        f"{res}/samples/{{s}}/dflye/dflye_assembly.log"
     shell:
-        "dragonflye --reads {input} --trim --gsize {params.size} --outdir "
-        f"{res}/{{wildcards.sample}}/dflye --force "
+        "dragonflye --tmpdir {params.dflye_temp} --reads {input} --trim "
+        "--gsize {params.size} --outdir "
+        f"{res}/samples/{{wildcards.s}}/dflye --force "
         "--cpus {threads} {params.medaka} --racon {params.racon} "
         "2>&1 | tee {log} ; "
-        f"cp {res}/{{wildcards.sample}}/dflye/contigs.fa {{output}}"
+        f"cp {res}/samples/{{wildcards.s}}/dflye/contigs.fa {{output}}"
 
 rule dflye_short_polish_assembly:
-    threads: 8
+    threads: 16 
     conda:
         "envs/dflye.yaml"
     params:
         size = config['dflye_genome_size'],
         medaka = config['_DFLYE_MEDAKA'],
-        racon = config['dflye_racon']
+        racon = config['dflye_racon'],
+        dflye_temp = config['dflye_temp']
     input:
-        L = f"{res}/{{sample}}/input/long.fastq.gz",
-        R1 = f"{res}/{{sample}}/input/R1.trim.fastq.gz",
-        R2 = f"{res}/{{sample}}/input/R2.trim.fastq.gz"
+        L = f"{res}/samples/{{s}}/input/long.fastq.gz",
+        R1 = f"{res}/samples/{{s}}/input/R1.trim.fastq.gz",
+        R2 = f"{res}/samples/{{s}}/input/R2.trim.fastq.gz"
     output:
-        f"{res}/{{sample}}/dflye_short_polish/contigs.fa"
+        f"{res}/samples/{{s}}/dflye_short_polish/{{s}}.polish.contigs.fa"
     log:
-        f"{res}/{{sample}}/dflye_short_polish/dflye_assembly.log"
+        f"{res}/samples/{{s}}/dflye_short_polish/dflye_assembly.log"
     resources:
         mem_mb=62000
     shell:
         "dragonflye --reads {input.L} --R1 {input.R1} --R2 {input.R2} "
         "--trim --gsize {params.size} --outdir "
-        f"{res}/{{wildcards.sample}}/dflye_short_polish "
+        f"{res}/samples/{{wildcards.s}}/dflye_short_polish "
         "--cpus {threads} --racon {params.racon} {params.medaka} "
         # "--pilon 1 " # ignore for now, due to memory
         "--polypolish 3 --force "
-        " 2>&1 | tee {log}"
+        " 2>&1 | tee {log} && "
+        f"cp {res}/samples/{{wildcards.s}}/dflye_short_polish/contigs.fa {{output}}"
 
 
 # Kraken2 contamination of assembly
@@ -296,13 +454,13 @@ rule kraken2_contamination_assembly:
     conda:
         "envs/kraken2.yaml"
     input:
-        f"{res}/{{sample}}/shovill_assembly/{{sample}}.shovill.contigs.fa"
+        f"{res}/samples/{{s}}/shovill_assembly/{{s}}.shovill.contigs.fa"
     output:
-        report = f"{res}/{{sample}}/shovill_assembly/kraken.assembly"
+        report = f"{res}/samples/{{s}}/shovill_assembly/kraken.assembly"
     params:
         kdb = config["kraken_db"]
     log:
-        f"{res}/{{sample}}/shovill_assembly/kraken.assembly.log"
+        f"{res}/samples/{{s}}/shovill_assembly/kraken.assembly.log"
     shell:
         "kraken2 --db {params.kdb} --threads {threads} --quick "
         "{input} --report {output.report} --output - 2>&1 | tee {log}"
@@ -312,13 +470,13 @@ rule kraken2_contamination_long_assembly:
     conda:
         "envs/kraken2.yaml"
     input:
-        f"{res}/{{sample}}/dflye/{{sample}}.dflye.contigs.fa"
+        f"{res}/samples/{{s}}/dflye/{{s}}.dflye.contigs.fa"
     output:
-        report = f"{res}/{{sample}}/dflye/dflye.assembly"
+        report = f"{res}/samples/{{s}}/dflye/dflye.assembly"
     params:
         kdb = config["kraken_db"]
     log:
-        f"{res}/{{sample}}/dflye/dflye.assembly.log"
+        f"{res}/samples/{{s}}/dflye/dflye.assembly.log"
     shell:
         "kraken2 --db {params.kdb} --threads {threads} --quick "
         "{input} --report {output.report} --output - 2>&1 | tee {log}"
@@ -331,9 +489,9 @@ rule assembly_status_erm41:
     conda:
         "envs/blast.yaml"
     input:
-        f"{res}/{{sample}}/shovill_assembly/{{sample}}.shovill.contigs.fa"
+        f"{res}/samples/{{s}}/shovill_assembly/{{s}}.shovill.contigs.fa"
     output:
-        f"{res}/{{sample}}/{{sample}}.erm41.status"
+        f"{res}/samples/{{s}}/{{s}}.erm41.status"
     params:
         query_file = config["erm41_query"]
     shell:
@@ -346,9 +504,9 @@ rule assembly_status_erm41_long:
     conda:
         "envs/blast.yaml"
     input:
-        f"{res}/{{sample}}/dflye/{{sample}}.dflye.contigs.fa"
+        f"{res}/samples/{{s}}/dflye/{{s}}.dflye.contigs.fa"
     output:
-        f"{res}/{{sample}}/{{sample}}.long.erm41.status"
+        f"{res}/samples/{{s}}/{{s}}.long.erm41.status"
     params:
         query_file = config["erm41_query"]
     shell:
@@ -363,20 +521,20 @@ rule short_map_to_mabs:
         "envs/bwa.yaml"
     threads: 4
     input:
-        R1 = f"{res}/{{sample}}/input/R1.trim.fastq.gz",
-        R2 = f"{res}/{{sample}}/input/R2.trim.fastq.gz",
-        S1 = f"{res}/{{sample}}/input/S1.trim.fastq.gz",
+        R1 = f"{res}/samples/{{s}}/input/R1.trim.fastq.gz",
+        R2 = f"{res}/samples/{{s}}/input/R2.trim.fastq.gz",
+        S1 = f"{res}/samples/{{s}}/input/S1.trim.fastq.gz",
         idx = f"workflow/resources/alignment_references/mabscessus.fasta.amb"
     params:
         execdir = exec_dir
     output:
-        paired_temp = temp(f"{res}/{{sample}}/ref_mapping/paired.sorted.bam"),
-        paired_temp_bai = temp(f"{res}/{{sample}}/ref_mapping/paired.sorted.bam.bai"),
-        single_temp = temp(f"{res}/{{sample}}/ref_mapping/single.sorted.bam"),
-        single_temp_bai = temp(f"{res}/{{sample}}/ref_mapping/single.sorted.bam.bai"),
-        merge_temp = temp(f"{res}/{{sample}}/ref_mapping/merge.bam"),
-        merge_sorted = f"{res}/{{sample}}/ref_mapping/mabs/merged.sorted.bam",
-        merge_sorted_bai = f"{res}/{{sample}}/ref_mapping/mabs/merged.sorted.bam.bai"
+        paired_temp = temp(f"{res}/samples/{{s}}/ref_mapping/paired.sorted.bam"),
+        paired_temp_bai = temp(f"{res}/samples/{{s}}/ref_mapping/paired.sorted.bam.bai"),
+        single_temp = temp(f"{res}/samples/{{s}}/ref_mapping/single.sorted.bam"),
+        single_temp_bai = temp(f"{res}/samples/{{s}}/ref_mapping/single.sorted.bam.bai"),
+        merge_temp = temp(f"{res}/samples/{{s}}/ref_mapping/merge.bam"),
+        merge_sorted = f"{res}/samples/{{s}}/ref_mapping/mabs/merged.sorted.bam",
+        merge_sorted_bai = f"{res}/samples/{{s}}/ref_mapping/mabs/merged.sorted.bam.bai"
     shell:
         "bwa-mem2 mem -t {threads} -M "
         "workflow/resources/alignment_references/mabscessus.fasta "
@@ -399,10 +557,10 @@ rule long_map_to_mabs:
         "envs/bwa.yaml"
     threads: 8
     input:
-        f"{res}/{{sample}}/input/long.fastq.gz"
+        f"{res}/samples/{{s}}/input/long.fastq.gz"
     output:
-        bam = f"{res}/{{sample}}/ref_mapping/mabs/longmerged.sorted.bam",
-        index = f"{res}/{{sample}}/ref_mapping/mabs/longmerged.sorted.bam.bai"
+        bam = f"{res}/samples/{{s}}/ref_mapping/mabs/longmerged.sorted.bam",
+        index = f"{res}/samples/{{s}}/ref_mapping/mabs/longmerged.sorted.bam.bai"
     shell:
         "minimap2 -x map-ont -t {threads} -a "
         "workflow/resources/alignment_references/mabscessus.fasta {input} | "
@@ -414,9 +572,9 @@ rule depth_map_to_mabs:
     conda:
         "envs/bwa.yaml"
     input:
-        f"{res}/{{sample}}/ref_mapping/mabs/merged.sorted.bam"
+        f"{res}/samples/{{s}}/ref_mapping/mabs/merged.sorted.bam"
     output:
-        depth = f"{res}/{{sample}}/ref_mapping/mabs/merged.sorted.depth.gz"
+        depth = f"{res}/samples/{{s}}/ref_mapping/mabs/merged.sorted.depth.gz"
     shell:
         "bedtools genomecov -d -ibam {input} -g "
         "workflow/resources/alignment_references/mabcessus.fasta | gzip > "
@@ -453,13 +611,17 @@ rule mashtree_assemblies:
         # of complete refseq genomes
         aggregate_refseq,
         internal = expand(
-            "{res}/{sample}/shovill_assembly/{sample}.shovill.contigs.fa",
+            "{res}/samples/{s}/shovill_assembly/{s}.shovill.contigs.fa",
             res=res,
-            sample=short_sample_names
+            s=short_sample_names
         ) + expand(
-            "{res}/{sample}/dflye/{sample}.dflye.contigs.fa",
+            "{res}/samples/{s}/dflye/{s}.dflye.contigs.fa",
             res=res, 
-            sample=long_sample_names
+            s=long_sample_names
+        ) + expand(
+            "{res}/samples/{s}/dflye_short_polish/{s}.polish.contigs.fa",
+            res=res,
+            s=both_samples
         )
     params:
         # the mashtree tempdir can get large, depending on the number of
@@ -486,9 +648,9 @@ rule MRCA_from_tree:
     input:
         f"{res}/mashtree/assembly_mashtree.complete.tree"
     output:
-        f"{res}/{{sample}}/{{sample}}.MRCA.csv"
+        f"{res}/samples/{{s}}/{{s}}.MRCA.csv"
     shell:
-        "workflow/scripts/tree_MRCA.py ref {input} {wildcards.sample} "
+        "workflow/scripts/tree_MRCA.py ref {input} {wildcards.s} "
         f"{config_path} > {{output}}"
 
 
@@ -499,14 +661,14 @@ rule MRCA_long_from_tree:
     input:
         f"{res}/mashtree/assembly_mashtree.complete.tree"
     output:
-        f"{res}/{{sample}}/{{sample}}.long.MRCA.csv"
+        f"{res}/samples/{{s}}/{{s}}.long.MRCA.csv"
     shell:
-        "workflow/scripts/tree_MRCA.py ref {input} {wildcards.sample} "
+        "workflow/scripts/tree_MRCA.py ref {input} {wildcards.s} "
         f"{config_path} > {{output}}"
 
 
 # This rule determines which samples will use which reference or MLST scheme
-# note that in October 2020 the scheme from pubMLST.org was updated to include
+# note that in October 2020 the scheme from pubMLST.org was updadfased to include
 # the clonal complex, and mmassiliense was removed. Versions of mlst beyond
 # 2.19.x now use the updated mabscesus scheme
 rule MRCA_MLST:
@@ -515,9 +677,9 @@ rule MRCA_MLST:
         "envs/ngd_phylo.yaml"
     input:
         tree = f"{res}/mashtree/assembly_mashtree.complete.tree",
-        assembly = f"{res}/{{sample}}/shovill_assembly/{{sample}}.shovill.contigs.fa"
+        assembly = f"{res}/samples/{{s}}/shovill_assembly/{{s}}.shovill.contigs.fa"
     output:
-        f"{res}/{{sample}}/{{sample}}.MLST.csv"
+        f"{res}/samples/{{s}}/{{s}}.MLST.csv"
     shell:
         "mlst --scheme mabscessus --threads {threads} "
         "{input.assembly} > {output}"
@@ -528,45 +690,46 @@ rule MRCA_long_MLST:
         "envs/ngd_phylo.yaml"
     input:
         tree = f"{res}/mashtree/assembly_mashtree.complete.tree",
-        assembly = f"{res}/{{sample}}/dflye/{{sample}}.dflye.contigs.fa"
+        assembly = f"{res}/samples/{{s}}/dflye/{{s}}.dflye.contigs.fa"
     output:
-        f"{res}/{{sample}}/{{sample}}.long.MLST.csv"
+        f"{res}/samples/{{s}}/{{s}}.long.MLST.csv"
     shell:
         "mlst --scheme mabscessus --threads {threads} "
         "{input.assembly} > {output}"
 
 
 def QC_input(wildcards):
+    prefix = f"{res}/samples/{wildcards.s}"
     outf = {}    
-    if wildcards.sample in short_sample_names:
-        outf['short_preR1_fastqc'] = f"{res}/{wildcards.sample}/input/R1_fastqc.data.txt",
-        outf['short_preR2_fastqc'] = f"{res}/{wildcards.sample}/input/R2_fastqc.data.txt",
-        outf['short_tR1_fastqc'] = f"{res}/{wildcards.sample}/input/R1.trim_fastqc.data.txt",
-        outf['short_tR2_fastqc'] = f"{res}/{wildcards.sample}/input/R2.trim_fastqc.data.txt",
-        outf['short_tS1_fastqc'] = f"{res}/{wildcards.sample}/input/S1.trim_fastqc.data.txt",
-        outf['short_tS2_fastqc'] = f"{res}/{wildcards.sample}/input/S2.trim_fastqc.data.txt",
+    if wildcards.s in short_sample_names:
+        outf['short_preR1_fastqc'] = f"{prefix}/input/R1_fastqc.data.txt",
+        outf['short_preR2_fastqc'] = f"{prefix}/input/R2_fastqc.data.txt",
+        outf['short_tR1_fastqc'] = f"{prefix}/input/R1.trim_fastqc.data.txt",
+        outf['short_tR2_fastqc'] = f"{prefix}/input/R2.trim_fastqc.data.txt",
+        outf['short_tS1_fastqc'] = f"{prefix}/input/S1.trim_fastqc.data.txt",
+        outf['short_tS2_fastqc'] = f"{prefix}/input/S2.trim_fastqc.data.txt",
         outf['tree'] = f"{res}/mashtree/assembly_mashtree.complete.tree",
-        outf['raw_kraken'] = f"{res}/{wildcards.sample}/input/kraken.raw.paired",
-        outf['trim'] = f"{res}/{wildcards.sample}/input/trimmomatic.log",
-        outf['pair_kraken2'] = f"{res}/{wildcards.sample}/input/kraken.trimmed.paired",
-        outf['single_kraken2'] = f"{res}/{wildcards.sample}/input/kraken.trimmed.single",
-        outf['short_assembly'] = f"{res}/{wildcards.sample}/shovill_assembly/{wildcards.sample}.shovill.contigs.fa",
-        outf['MRCA'] = f"{res}/{wildcards.sample}/{wildcards.sample}.MRCA.csv",
-        outf['mlst'] = f"{res}/{wildcards.sample}/{wildcards.sample}.MLST.csv",
-        outf['erm41'] = f"{res}/{wildcards.sample}/{wildcards.sample}.erm41.status",
-        outf['mabs_bam'] = f"{res}/{wildcards.sample}/ref_mapping/mabs/merged.sorted.bam",
-        outf['mabs_depth'] = f"{res}/{wildcards.sample}/ref_mapping/mabs/merged.sorted.depth.gz",
-    if wildcards.sample in long_sample_names:
-        outf['long_fastqc'] = f"{res}/{wildcards.sample}/input/long_fastqc.data.txt",
-        outf['long_assembly'] = f"{res}/{wildcards.sample}/dflye/{wildcards.sample}.dflye.contigs.fa",
-        outf['MRCA_long'] = f"{res}/{wildcards.sample}/{wildcards.sample}.long.MRCA.csv",
-        outf['MLST_long'] = f"{res}/{wildcards.sample}/{wildcards.sample}.long.MLST.csv",
-        outf['erm41_long'] = f"{res}/{wildcards.sample}/{wildcards.sample}.long.erm41.status",
-    if wildcards.sample in long_only_sample_names:
-        outf['mabs_bam'] = f"{res}/{wildcards.sample}/ref_mapping/mabs/longmerged.sorted.bam",
-        outf['mabs_depth'] = f"{res}/{wildcards.sample}/ref_mapping/mabs/longmerged.sorted.depth.gz",
-    if wildcards.sample in both_samples:
-        outf['long_polish_assembly'] = f"{res}/{wildcards.sample}/dflye_short_polish/contigs.fa",
+        outf['raw_kraken'] = f"{prefix}/input/kraken.raw.paired",
+        outf['trim'] = f"{prefix}/input/trimmomatic.log",
+        outf['pair_kraken2'] = f"{prefix}/input/kraken.trimmed.paired",
+        outf['single_kraken2'] = f"{prefix}/input/kraken.trimmed.single",
+        outf['short_assembly'] = f"{prefix}/shovill_assembly/{wildcards.s}.shovill.contigs.fa",
+        outf['MRCA'] = f"{prefix}/{wildcards.s}.MRCA.csv",
+        outf['mlst'] = f"{prefix}/{wildcards.s}.MLST.csv",
+        outf['erm41'] = f"{prefix}/{wildcards.s}.erm41.status",
+        outf['mabs_bam'] = f"{prefix}/ref_mapping/mabs/merged.sorted.bam",
+        outf['mabs_depth'] = f"{prefix}/ref_mapping/mabs/merged.sorted.depth.gz",
+    if wildcards.s in long_sample_names:
+        outf['long_fastqc'] = f"{prefix}/input/long_fastqc.data.txt",
+        outf['long_assembly'] = f"{prefix}/dflye/{wildcards.s}.dflye.contigs.fa",
+        outf['MRCA_long'] = f"{prefix}/{wildcards.s}.long.MRCA.csv",
+        outf['MLST_long'] = f"{prefix}/{wildcards.s}.long.MLST.csv",
+        outf['erm41_long'] = f"{prefix}/{wildcards.s}.long.erm41.status",
+    if wildcards.s in long_only_sample_names:
+        outf['mabs_bam'] = f"{prefix}/ref_mapping/mabs/longmerged.sorted.bam",
+        outf['mabs_depth'] = f"{prefix}/ref_mapping/mabs/longmerged.sorted.depth.gz",
+    if wildcards.s in both_samples:
+        outf['long_polish_assembly'] = f"{prefix}/dflye_short_polish/{wildcards}.polish.contigs.fa",
 
     return outf
 
@@ -578,13 +741,11 @@ rule QC_stats_per_sample:
     input:
         unpack(lambda wildcards: QC_input(wildcards))
     output:
-        f"{res}/{{sample}}/{{sample}}.QC.csv"
-    params:
-        execdir = exec_dir
+        f"{res}/samples/{{s}}/{{s}}.QC.csv"
     log:
-        f"{res}/{{sample}}/sample.QC.log"
+        f"{res}/samples/{{s}}/sample.QC.log"
     shell:
-        "workflow/scripts/sample_stats.py {wildcards.sample} {params.resdir} "
+        "workflow/scripts/sample_stats.py {wildcards.s} {params.resdir} "
         " > {output} 2> {log}"
 
 rule prokka_annotate_dflye:
@@ -593,19 +754,22 @@ rule prokka_annotate_dflye:
     threads: 8
     params:
         ref = lambda wildcards: ref_from_QC(
-            wildcards.sample, f"{res}/QC_summary.csv"
+            wildcards.s, f"{res}/QC_summary.csv"
         )
     input:
-        f"{res}/{{sample}}/dflye/{{sample}}.dflye.contigs.fa",
-        f"{res}/QC_summary.csv"
+        assembly = f"{res}/samples/{{s}}/dflye/{{s}}.dflye.contigs.fa",
+        QC = f"{res}/QC_summary.csv"
     output:
-        f"{res}/{{sample}}/{{sample}}.{{dflye}}.prokka.gff"
+        f"{res}/samples/{{s}}/{{s}}.{{dflye}}.prokka.gff"
     shell:
-        "prokka --prefix {wildcards.sample}.{wildcards.dflye}.prokka "
-        f"--outdir {res}/{{wildcards.sample}}/ --force --kingdom Bacteria "
-        "--compliant --cpus {threads}  "
-        "--proteins workflow/resources/alignment_references/{params.ref}.gbk "
-        "{input}"
+        "prokka --prefix {wildcards.s}.{wildcards.dflye}.prokka "
+        f"--outdir {res}/samples/{{wildcards.s}}/ --force --kingdom Bacteria "
+        "--compliant --cpus {threads} --proteins '' "
+        # "if " 
+        # "[ -f workflow/resources/alignment_references/{params.ref}.gbk ] ; "
+        # "then echo \"workflow/resources/aignment_references/{params.ref}.gbk\" ; else echo \"\" ; "
+        # "fi ) "
+        "{input.assembly}"
 
 
 rule merge_QC_summary:
@@ -615,12 +779,28 @@ rule merge_QC_summary:
     threads: 1
     input:
         expand(
-            "{res}/{sample}/{sample}.QC.csv",
+            "{res}/samples/{s}/{s}.QC.csv",
             res=res,
-            sample=short_sample_names + long_sample_names
+            s=short_sample_names + long_sample_names
         )
     output:
         f"{res}/QC_summary.csv"
     shell:
         "workflow/scripts/merge_QC_csv.py {output} {input}"
+
+
+###################################
+# NEED FOR STAGE 2
+###################################
+rule configure_stage2yaml:
+    threads: 1
+    input:
+        QC = f"{res}/QC_summary.csv",
+        config = config_path
+    output:
+        f"{res}/stage2.yaml"
+    shell:
+        "workflow/scripts/make_stage2yaml.py {input.QC} {input.config} > "
+        "{output}"
+
 

@@ -144,7 +144,7 @@ def parse_fastqc_data(infile):
 
 
 def fastqc_short_raw(sample, stats):
-    base = Path(f"{stats['results_dir']}/{sample}")
+    base = Path(f"{stats['results_dir']}/samples/{sample}")
 
     stats['raw_QC_num_pairs'] = 'N/A'
     stats['raw_QC_reads1'] = 'N/A'
@@ -179,7 +179,7 @@ def fastqc_short_raw(sample, stats):
 
 def short_raw(sample, stats):
     results_dir = stats['results_dir']
-    base = Path(f'{results_dir}/{sample}')
+    base = Path(f'{results_dir}/samples/{sample}')
     from Bio import SeqIO
     stats['raw_QC_num_pairs'] = 'N/A'
     stats['raw_QC_reads1'] = 'N/A'
@@ -239,7 +239,7 @@ def short_raw(sample, stats):
 
 
 def fastqc_post_trim_QC(sample, stats):
-    base = Path(f"{stats['results_dir']}/{sample}")
+    base = Path(f"{stats['results_dir']}/samples/{sample}")
 
     stats['post_trim_QC_num_pairs'] = 'N/A'
     stats['post_trim_QC_readsR1'] = 'N/A'
@@ -299,7 +299,7 @@ def post_trim_QC(sample, stats):
     stats['post_trim_QC_basesR2'] = 'N/A'
     stats['post_trim_QC_basesS1'] = 'N/A'
     stats['post_trim_QC_basesS2'] = 'N/A'
-    base = Path(f'./{results_dir}/{sample}')
+    base = Path(f'./{results_dir}/samples/{sample}')
 
     for i in ['R1', 'R2', 'S1', 'S2']:
         inf = base / 'input' / f'{i}.trim.fastq.gz'
@@ -337,7 +337,7 @@ def fastqc_long_QC(sample, stats):
     stats['long_QC_num_bases'] = 'N/A'
 
     try:
-        base = Path(f'./{results_dir}/{sample}')
+        base = Path(f'./{results_dir}/samples/{sample}')
         inf = base / 'input' / 'long_fastqc.data.txt'
         num, MQ, total_bases, Mlen = parse_fastqc_data(inf)
     except Exception as e:
@@ -355,7 +355,7 @@ def fastqc_long_QC(sample, stats):
 def kraken(sample, stats):
     results_dir = stats['results_dir']
 
-    base = Path(f'./{results_dir}/{sample}')
+    base = Path(f'./{results_dir}/samples/{sample}')
     for i in ['raw.paired', 'trimmed.paired', 'trimmed.single']:
         stats[f'kraken_{i}_s1_frac'] = 'N/A'
         stats[f'kraken_{i}_s1_num'] = 'N/A'
@@ -401,7 +401,7 @@ def short_assembly(sample, stats):
     stats['short_assembly_N50'] = 'N/A'
     stats['short_assembly_L50'] = 'N/A'
 
-    base = Path(f'./{results_dir}/{sample}')
+    base = Path(f'./{results_dir}/samples/{sample}')
     inf = base / 'shovill_assembly' / 'contigs.fa'
     try:
         records = [r for r in SeqIO.parse(open(inf, 'r'), format='fasta')]
@@ -433,7 +433,7 @@ def long_assembly(sample, stats):
     stats['long_assembly_N50'] = 'N/A'
     stats['long_assembly_L50'] = 'N/A'
 
-    base = Path(f'./{results_dir}/{sample}')
+    base = Path(f'./{results_dir}/samples/{sample}')
     inf = base / 'dflye' / 'contigs.fa'
     try:
         records = [r for r in SeqIO.parse(open(inf, 'r'), format='fasta')]
@@ -464,7 +464,7 @@ def long_polished_assembly(sample, stats):
     stats['long_polish_assembly_N50'] = 'N/A'
     stats['long_polish_assembly_L50'] = 'N/A'
 
-    base = Path(f'./{results_dir}/{sample}')
+    base = Path(f'./{results_dir}/samples/{sample}')
     inf = base / 'dflye_short_polish' / 'contigs.fa'
     try:
         records = [r for r in SeqIO.parse(open(inf, 'r'), format='fasta')]
@@ -506,7 +506,7 @@ def mapping(sample, stats):
 
     import pysam
 
-    base = Path(f'./{results_dir}/{sample}')
+    base = Path(f'./{results_dir}/samples/{sample}')
 
     inf = base / 'ref_mapping' / 'mabs' / 'merged.sorted.bam'
     try:
@@ -564,7 +564,7 @@ def long_mapping(sample, stats):
 
     import pysam
 
-    base = Path(f'./{results_dir}/{sample}')
+    base = Path(f'./{results_dir}/samples/{sample}')
 
     inf = base / 'ref_mapping' / 'mabs' / 'longmerged.sorted.bam'
     try:
@@ -609,7 +609,7 @@ def MRCA(sample, stats):
     results_dir = stats['results_dir']
     stats['MRCA_ref'] = 'N/A'
 
-    base = Path(f'./{results_dir}/{sample}')
+    base = Path(f'./{results_dir}/samples/{sample}')
 
     inf = base / f'{sample}.MRCA.csv'
     try:
@@ -626,7 +626,7 @@ def long_MRCA(sample, stats):
     results_dir = stats['results_dir']
     stats['MRCA_long_ref'] = 'N/A'
 
-    base = Path(f'./{results_dir}/{sample}')
+    base = Path(f'./{results_dir}/samples/{sample}')
 
     inf = base / f'{sample}.long.MRCA.csv'
     try:
@@ -651,7 +651,7 @@ def MLST(sample, stats):
     stats['pubMLST_allele6'] = 'N/A'
     stats['pubMLST_allele7'] = 'N/A'
 
-    base = Path(f'./{results_dir}/{sample}')
+    base = Path(f'./{results_dir}/samples/{sample}')
 
     inf = base / f'{sample}.MLST.csv'
     try:
@@ -685,7 +685,7 @@ def MLST_long(sample, stats):
     stats['pubMLST_long_allele6'] = 'N/A'
     stats['pubMLST_long_allele7'] = 'N/A'
 
-    base = Path(f'./{results_dir}/{sample}')
+    base = Path(f'./{results_dir}/samples/{sample}')
 
     inf = base / f'{sample}.long.MLST.csv'
     try:
@@ -718,7 +718,7 @@ def erm41(sample, stats):
     stats['erm(41)_subject_start'] = 'N/A'
     stats['erm(41)_subject_end'] = 'N/A'
 
-    base = Path(f'./{results_dir}/{sample}')
+    base = Path(f'./{results_dir}/samples/{sample}')
 
     inf = base / f'{sample}.erm41.status'
     try:
@@ -749,7 +749,7 @@ def erm41_long(sample, stats):
     stats['erm(41)_long_subject_start'] = 'N/A'
     stats['erm(41)_long_subject_end'] = 'N/A'
 
-    base = Path(f'./{results_dir}/{sample}')
+    base = Path(f'./{results_dir}/samples/{sample}')
 
     inf = base / f'{sample}.long.erm41.status'
     try:

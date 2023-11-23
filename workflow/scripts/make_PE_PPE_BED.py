@@ -45,8 +45,13 @@ import sys
 from Bio import SeqIO
 
 infile = sys.argv[1]
+try:
+    records = [r for r in SeqIO.parse(infile, format='gb')]
+except FileNotFoundError as e:
+    print(f"no input file: {infile} - empty output")
+    print("")
+    exit()
 
-records = [r for r in SeqIO.parse(infile, format='gb')]
 for r in records:
     CDS = [f for f in r.features if f.type == 'CDS']
     for c in CDS:

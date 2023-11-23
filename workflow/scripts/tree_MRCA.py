@@ -39,9 +39,10 @@ def tree_MRCA(in_tree, sample):
     mmas_acc = 'GCF_000497265.2'
     try:
         config = yaml.safe_load(open(config_path, 'r'))
-        mabs_acc = config['mash_ref_taxa']['mabscessus']
-        mbol_acc = config['mash_ref_taxa']['mbolletii']
-        mmas_acc = config['mash_ref_taxa']['mmassiliense']
+        mabs_acc = 'mabscessus'
+        mbol_acc = 'mbolletii'
+        mmas_acc = 'mmassiliense'
+        out_acc = config['outgroup_assembly'] 
     except FileNotFoundError:
         exit(f"specified config file {config_path} not found")
 
@@ -58,6 +59,7 @@ def tree_MRCA(in_tree, sample):
         'mabs_target': None
     }
     for t in leaves:
+        print(t, file=sys.stderr)
         if mbol_acc in t.name:
             targets['mbol_target'] = t
         #if 'GCF_000239055.1' in t.name:
@@ -65,7 +67,9 @@ def tree_MRCA(in_tree, sample):
             targets['mmas_target'] = t
         if mabs_acc in t.name:
             targets['mabs_target'] = t
-    # print(targets, file=sys.stderr)
+        if out_acc in t.name:
+            mbtree.set_outgroup(t)
+    print(targets, file=sys.stderr)
 
     mabs_dist = 1000000.0
     mmas_dist = 1000000.0
@@ -75,8 +79,10 @@ def tree_MRCA(in_tree, sample):
         mmas_dist = targets['mmas_target'].get_distance(sample_node[0])
         mabs_dist = targets['mabs_target'].get_distance(sample_node[0])
     except Exception:
+        print('fuck', file=sys.stderr)
         pass
 
+    print(mabs_dist, mmas_dist, mbol_dist, file=sys.stderr)
     mindist = min([mbol_dist, mmas_dist, mabs_dist])
     if mindist == mbol_dist:
         return 'mbolletii'

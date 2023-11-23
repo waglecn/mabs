@@ -10,10 +10,10 @@ rule long_temp_MRCA_ref_alignment:
         "envs/bwa.yaml"
     input:
         QC = f"{res}/QC_summary.csv",
-        reads = f"{res}/{{sample}}/input/long.fastq.gz",
+        reads = f"{res}/samples/{{s}}/input/long.fastq.gz",
     output:
         bam = temp(
-            f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/longmerged.sorted.bam"
+            f"{res}/samples/{{s}}/map/{{ref}}/temp.long.merged.sorted.bam"
         ),
     shell:
         "minimap2 -x map-ont -t {threads} -a "
@@ -24,24 +24,24 @@ rule long_temp_MRCA_ref_alignment:
 rule long_temp_add_read_groups:
     threads: 1
     input:
-        bam = f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/longmerged.sorted.bam",
-        bai = f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/longmerged.sorted.bam.bai"
+        bam = f"{res}/samples/{{s}}/map/{{ref}}/temp.long.merged.sorted.bam",
+        bai = f"{res}/samples/{{s}}/map/{{ref}}/temp.long.merged.sorted.bam.bai"
     output:
-        temp(f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/RG.longmerged.sorted.bam")
+        temp(f"{res}/samples/{{s}}/map/{{ref}}/tempRG.long.merged.sorted.bam")
     log:
-        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/longRG.log"
+        f"{res}/samples/{{s}}/map/{{ref}}/longRG.log"
     shell:
         "samtools addreplacerg -r "
-        "'@RG\tID:{wildcards.sample}\tSM:??????\tLB:??????\tPL:MINION' "
+        "'@RG\tID:{wildcards.s}\tSM:??????\tLB:??????\tPL:MINION' "
         "-o {output} {input.bam} | tee 2> {log}"
 
 rule long_MRCA_ref_softclip_filter:
     conda: "envs/bwa.yaml"
     threads: 1
     input:
-        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/RG.longmerged.sorted.bam"
+        f"{res}/samples/{{s}}/map/{{ref}}/tempRG.long.merged.sorted.bam"
     output:
-        temp(f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/RG_SC.longmerged.sorted.bam"),
+        temp(f"{res}/samples/{{s}}/map/{{ref}}/long.merged.sorted.bam"),
     shell:
         "workflow/scripts/sclips.py filter {input} > {output} "
 
@@ -50,10 +50,10 @@ rule long_MRCA_make_mpileup:
     conda:
         "envs/bwa.yaml"    
     input:
-        bam=f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/RG_SC.longmerged.sorted.bam",
-        bai=f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/RG_SC.longmerged.sorted.bam.bai"
+        bam=f"{res}/samples/{{s}}/map/{{ref}}/long.merged.sorted.bam",
+        bai=f"{res}/samples/{{s}}/map/{{ref}}/long.merged.sorted.bam.bai"
     output:
-        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/RG_SC.long.mpileup"
+        f"{res}/samples/{{s}}/map/{{ref}}/long.mpileup"
     shell:
         # note that mpileup has moved to bcftools
         # -d max depth
@@ -72,9 +72,9 @@ rule long_MRCA_call_and_filter_variants:
     conda:
         "envs/bwa.yaml"
     input:
-        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}.long.mpileup"
+        f"{res}/samples/{{s}}/map/{{ref}}/long.mpileup"
     output:
-        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}_filter.long.vcf.gz"
+        f"{res}/samples/{{s}}/map/{{ref}}/long.filter.vcf.gz"
     shell:
         # -Ov output uncompressed vcf
         # -m multiallelic caller
@@ -101,9 +101,9 @@ rule long_MRCA_inverse_filter:
     conda:
         "envs/bwa.yaml"
     input:
-        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}.long.mpileup"
+        f"{res}/samples/{{s}}/map/{{ref}}/long.mpileup"
     output:
-        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}_filter.long.failed.vcf.gz"
+        f"{res}/samples/{{s}}/map/{{ref}}/long.filter.failed.vcf.gz"
     shell:
         "bcftools call --ploidy 1 -Oz -m -v {input} | "
         "bcftools filter -i 'SP>=45 || MQ<=30 || FORMAT/DP<=10 || QUAL<=50' "
@@ -114,9 +114,9 @@ rule long_MRCA_inverse_AD_filter:
     conda:
         "envs/bwa.yaml"
     input:
-        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}.long.mpileup"
+        f"{res}/samples/{{s}}/map/{{ref}}/long.mpileup"
     output:
-        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}_filter.long.AD_failed.vcf.gz"
+        f"{res}/samples/{{s}}/map/{{ref}}/long.filter.AD_failed.vcf.gz"
     params:
         snp_cutoff = 0.90
     shell:
@@ -132,9 +132,9 @@ rule long_filter_hsnps:
     params:
         snp_cutoff = 0.90
     input:
-        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}_filter.long.vcf.gz"
+        f"{res}/samples/{{s}}/map/{{ref}}/long.filter.vcf.gz"
     output:
-        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}_filter.long.hvar.vcf.gz"
+        f"{res}/samples/{{s}}/map/{{ref}}/long.filter.hvar.vcf.gz"
     shell:
         "bcftools filter -i '(AD[0:1]/(AD[0:0]+AD[0:1]) > "
         "{params.snp_cutoff})' -Oz -o {output} {input} "
@@ -145,9 +145,9 @@ rule long_make_bed_0cov:
     conda:
         "envs/bwa.yaml"
     input:
-        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}.longmerged.sorted.bam"
+        f"{res}/samples/{{s}}/map/{{ref}}/long.merged.sorted.bam"
     output:
-        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}.long.0cov.bed"
+        f"{res}/samples/{{s}}/map/{{ref}}/long.0cov.bed"
     shell:
         "bedtools genomecov -ibam {input} -bga | awk '$4==0' > {output}"
 
@@ -156,9 +156,9 @@ rule long_make_bed_lowcov:
     conda:
         "envs/bwa.yaml"
     input:
-        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}.longmerged.sorted.bam"
+        f"{res}/samples/{{s}}/map/{{ref}}/long.merged.sorted.bam"
     output:
-        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}.long.lowcov.bed"
+        f"{res}/samples/{{s}}/map/{{ref}}/long.lowcov.bed"
     shell:
         "bedtools genomecov -bga -ibam {input} | awk '$4 < 10' > {output}"
 
@@ -168,9 +168,9 @@ rule long_make_variants_bed:
     conda:
         "envs/bwa.yaml"
     input:
-        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}_filter.long.hvar.vcf.gz"
+        f"{res}/samples/{{s}}/map/{{ref}}/long.filter.hvar.vcf.gz"
     output:
-        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}.long.variants.bed"
+        f"{res}/samples/{{s}}/map/{{ref}}/long.variants.bed"
     shell:
         "bcftools query -f'%CHROM\t%POS0\t%END\t%REF->%ALT\n' {input} > {output}"
 
@@ -179,10 +179,10 @@ rule long_make_mask_bed:
     conda:
         "envs/bwa.yaml"
     input:
-        varbed=f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}.long.variants.bed",
-        lowbed=f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}.long.lowcov.bed"
+        varbed=f"{res}/samples/{{s}}/map/{{ref}}/long.variants.bed",
+        lowbed=f"{res}/samples/{{s}}/map/{{ref}}/long.lowcov.bed"
     output:
-        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}.long.mask.bed"
+        f"{res}/samples/{{s}}/map/{{ref}}/long.mask.bed"
     shell:
         "bedtools subtract -a {input.lowbed} -b {input.varbed} > {output}"
 
@@ -192,25 +192,25 @@ rule long_make_simple_consensus:
         "envs/bwa.yaml"
     input:
         ref = "workflow/resources/alignment_references/{ref}.fasta",
-        vcf = f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}_filter.long.hvar.vcf.gz",
-        ids = f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}_filter.long.hvar.vcf.gz.csi",
-        mask = f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}.long.mask.bed"
+        vcf = f"{res}/samples/{{s}}/map/{{ref}}/long.filter.hvar.vcf.gz",
+        ids = f"{res}/samples/{{s}}/map/{{ref}}/long.filter.hvar.vcf.gz.csi",
+        mask = f"{res}/samples/{{s}}/map/{{ref}}/long.mask.bed"
     output:
-        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}.long.consensus.fa"
+        f"{res}/samples/{{s}}/map/{{ref}}/long.consensus.fa"
     shell:
-        f"bcftools consensus -p {{wildcards.sample}} "
+        f"bcftools consensus -p {{wildcards.s}} "
         "-f {input.ref} --mark-del '-' "
         "-m {input.mask} -i 'strlen(REF)>=strlen(ALT) & INFO/MQ >= 20 & FORMAT/DP >= 10' {input.vcf} | "
-        "sed \"/^>/s/{wildcards.sample}.*/{wildcards.sample}/\" > {output}"
+        "sed \"/^>/s/{wildcards.s}.*/{wildcards.s}.long/\" > {output}"
 
 rule long_density_filter_bed:
     threads: 1
     conda:
         "envs/bwa.yaml"
     input:
-        f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}_filter.long.hvar.vcf.gz"
+        f"{res}/samples/{{s}}/map/{{ref}}/long.filter.hvar.vcf.gz"
     output:
-        bed = f"{res}/{{sample}}/MRCA_ref_mapping/{{ref}}/{{step,[A-Z_]+}}_filter.long.hvar_DF.bed"
+        bed = f"{res}/samples/{{s}}/map/{{ref}}/long.filter.hvar_DF.bed"
     shell:
         "workflow/scripts/make_vcf_density_bed.py {input} > {output.bed}"
 
