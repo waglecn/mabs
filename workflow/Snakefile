@@ -106,39 +106,4 @@ rule stage1:
         ###############
         # STAGE 1 - QC
         ###############
-        f"{res}/QC_summary.csv"
-
-
-        
-# gubbins_output = []
-# gubbins = ['nogubbins']
-# # TODO: this needs to be per-reference, ie a reference has to have at least 3
-# # isolates assigned to it in order to be eligible for gubbins, otherwise
-# # skip gubbins
-# if len(list(set(list(filt_short_samples + filt_long_samples)))) >= 3:
-#     gubbins_output += expand(
-#         "{res}/gubbins/{ref}.gubbins.done",
-#         res=res,
-#         ref=(
-#             ref_from_QC(s, f"{res}/QC_summary.csv")  for s in 
-#             filt_short_samples + filt_long_samples
-#         )
-#     )
-#     gubbins_output += expand(
-#         "{res}/gubbins/{ref}.gubbins.bed",
-#         res=res,
-#         ref=(
-#             ref_from_QC(s, f"{res}/QC_summary.csv") for s in 
-#             filt_short_samples + filt_long_samples
-#         )
-#     )
-#     gubbins_output += expand(
-#         "{res}/MRCA_ref_mapping/{ref}/merge.gubbins.vcf.gz",
-#         res=res,
-#         ref=(
-#             ref_from_QC(s, f"{res}/QC_summary.csv") for s in 
-#             filt_short_samples + filt_long_samples
-#         )
-#     ),
-#     gubbins += ['gubbins']
-
+        rules.stage1_all_outputs.input

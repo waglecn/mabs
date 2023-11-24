@@ -184,10 +184,11 @@ rule stage1_all_outputs:
         f"{res}/mashtree/assembly_mashtree.complete.tree",
         f"{res}/mashtree/assembly_mashtree.complete.matrix",
         f"{res}/QC_summary.csv",
-        expand(
-            "{res}/samples/{s}/{s}.{dflye}.prokka.gff",
-            res=res, s=both_samples, dflye="dflye_short_polish"
-        )
+        # expand(
+        #     "{res}/samples/{s}/{s}.{dflye}.prokka.gff",
+        #     res=res, s=both_samples, dflye="dflye_short_polish"
+        # )
+
 
 ########################################################################
 # Internal Data Rules - PHASE 1

@@ -91,3 +91,27 @@ rule make_PE_PPE_BED:
         "workflow/resources/alignment_references/{ref}.PE_PPE.bed"
     shell:
         "workflow/scripts/make_PE_PPE_BED.py {input} > {output}"
+
+###########################################
+# Cleanup rules
+###########################################
+
+rule clean_gubbins_tmp:
+    threads: 1
+    log:
+        f"{res}/logs/clean_gubbins.log"
+    shell:
+        "rm -Ifr tmp*"
+
+rule clean_mashtree_tmp:
+    threads: 1
+    log:
+        f"{res}/logs/clean_mashtree_tmp.log"
+    shell:
+        "rm -Ifr mashtree_tmp"
+
+rule cleanup:
+    input:
+        rules.clean_gubbins_tmp.log,
+        rules.clean_mashtree_tmp.log
+        

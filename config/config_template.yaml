@@ -30,6 +30,8 @@ dflye_medaka_opts: '-b 50'
 dflye_racon: 3
 # estimated genome size
 dflye_genome_size: 5000000
+# fast storage for temp assembly
+dflye_temp: '/tmp'
 # A tempdir can get quite large, running out of space is a failure point
 mashtree_tempdir: "mashtree_tmp"
 # This sequence is the definitional Erm(41) in Nash et al 2009 (PMID:19171799)
@@ -39,11 +41,12 @@ outgroup_assembly: "GCF_000195955.2"
 # directroy for all results
 results_dir: "results"
 # default mash taxa bolletii, mmas, abscessus
-mash_ref_taxa: {
-    'mbolletii': 'GCF_003609715.1',
-    'mmassiliense': 'GCF_000497265.2',
+mash_ref_taxa: 
+    'mbolletii': 'GCF_003609715.1'
+    'mmassiliense': 'GCF_000497265.2'
     'mabscessus': 'GCF_000069185.1'
-}
+landmark_taxa:
+
 # samples to exclude in stage 2
 exclude_short_samples: []
 exclude_long_samples: []

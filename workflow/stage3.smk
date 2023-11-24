@@ -118,38 +118,6 @@ rule make_gubbins_bed:
         "{input.sentinel} | bedtools sort -i stdin | bedtools merge -i stdin "
         "-c 4 -o distinct > {output}"
 
-# rule merge_per_sample_bed:
-#     threads: 1
-#     conda:
-#         "envs/bwa.yaml"
-#     input:
-#         gubbinsbed = f"{res}/gubbins/{{ref}}.gubbins.bed",
-#         PEbed = "workflow/resources/alignment_references/{ref}.PE_PPE.bed",
-#         maskbed = f"{res}/samples/{{s}}/map/{{ref}}/{{long_short}}.mask.bed",
-#         DFbed = f"{res}/samples/{{s}}/map/{{ref}}/{{long_short}}.filter.hvar_DF.bed",
-#     output:
-#         f"{res}/samples/{{s}}/map/{{ref}}/{{long_short}}.combined.bed"
-#     shell:
-#         "cat {input.maskbed} {input.DFbed} {input.gubbinsbed} {input.PEbed} | "
-#         "bedtools sort -i stdin | bedtools merge -i stdin -c 4 "
-#         "-o distinct_only > {output}"
-
-# rule make_masked_output:
-#     threads: 1
-#     conda:
-#         "envs/bwa.yaml"
-#     input:
-#         bed = f"{res}/samples/{{s}}/map/{{ref}}/{{long_short}}.combined.bed",
-#         vcf = f"{res}/samples/{{s}}/map/{{ref}}/{{long_short}}.filtered.hvar.vcf.gz",
-#         ref = f"workflow/resources/alignment_references/{{ref}}.fasta"
-#     output:
-#         f"{res}/samples/{{s}}/map/{{ref}}/{{long_short}}.combined.consensus.fasta"
-#     shell:
-#         f"bcftools consensus -p {{wildcards.s}} "
-#         "-f {input.ref} --mark-del '-' "
-#         "-m {input.bed} -i 'strlen(REF)>=strlen(ALT) & INFO/MQ >= 20 & FORMAT/DP >= 10' "
-#         "{input.vcf} | sed \"/^>/s/{wildcards.s}.*{wildcards.s}.{wildcards.long_short}\" > {output} "
-
 rule merge_per_sample_short_beds:
     threads: 1
     conda:
