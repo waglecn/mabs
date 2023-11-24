@@ -24,24 +24,27 @@ conda activate mabs
 	- asking for ete3 in the default environment will required python 3.6 (200921)
 
 ## Required files:
-- GATK3 jar file
-	- available from <https://console.cloud.google.com/storage/browser/gatk-software/package-archive/gatk>
-	- used '''GenomeAnalysisTK-3.8-1-0-gf15c1c3ef.tar.bz2'''
-	- https://storage.cloud.google.com/gatk-software/package-archive/gatk/GenomeAnalysisTK-3.8-1-0-gf15c1c3ef.tar.bz2
-	- see config.yaml
 - adapters for trimming - see config.yaml
 	- look for adapter files bundled with trimmomatic, ie.
 ```bash
 locate TruSeq3-PE.fa
 ```
 - Kraken database 
-ftp://ftp.ccb.jhu.edu/pub/data/kraken2_dbs/
+(preferred) https://benlangmead.github.io/aws-indexes/k2
+(original source) ftp://ftp.ccb.jhu.edu/pub/data/kraken2_dbs/
+
 ```bash
-wget ftp://ftp.ccb.jhu.edu/pub/data/kraken2_dbs/minikraken_8GB_202003.tgz
+wget https://genome-idx.s3.amazonaws.com/kraken/k2_standard_16gb_20231009.tar.gz
 ```
 
 # How to run
+
+The workflow proceeds in stages:
+- stage1 - QC and processing each sample, generation of stage2 configuration
+- stage2 - mapping samples against references in stage2.yaml (see workflow/stage2.smk). Right now, you need to generate this file in the results directory yourself.
+- stage3 - checking for recombination, pairwise snv distances, and phlyogenetics
+
 ```
-snakemake --configfile config.yaml --cores 8 --use-conda --conda-prefix /path/to/.snakemake/conda
+snakemake --configfile config/config.yaml --cores 32 --use-conda --conda-frontend mamba -k [ stage1 | stage2 | stage3 ]
 ```
 
