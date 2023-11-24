@@ -82,7 +82,10 @@ rule merge_consensus_fasta:
     output:
         f"{res}/gubbins/{{ref}}.fasta"
     shell:
-        "for i in {input} ; do cat $i >> {output} ; done"
+        "for i in {input} ; do "
+            "head -n 1 $i >> {output} ; "
+            "grep '>' -v $i >> {output} ; "
+        "done"
 
 rule run_gubbins:
     conda:
@@ -164,7 +167,10 @@ rule concatenate_consensus:
     output:
         f"{res}/map/{{ref}}.consensus.fasta"
     shell:
-        "for i in {input.ref} {input.isolates} ; do cat $i >> {output} ; done"
+        "for i in {input.ref} {input.isolates} ; do "
+            "head -n 1 $i >> {output} ; "
+            "grep '>' -v $i >> {output} ; "
+        "done"
 
 rule SNPs_phylogeny:
     conda:

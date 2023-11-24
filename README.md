@@ -48,3 +48,10 @@ The workflow proceeds in stages:
 snakemake --configfile config/config.yaml --cores 32 --use-conda --conda-frontend mamba -k [ stage1 | stage2 | stage3 ]
 ```
 
+# Cleanup
+
+The workflow can leave some junk files behind after running, to clean them up use target 'cleanup'
+
+```
+snakemake --configfile config/config.yaml --cores 32 cleanup
+```
