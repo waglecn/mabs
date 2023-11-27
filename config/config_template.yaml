@@ -15,6 +15,7 @@ adapters_fasta: "workflow/resources/TruSeq3-PE.fa"
 QC_min_length: 36
 # a directory, downloaded from kraken2 ftp - see Required Files in readme.md
 kraken_db: "k2_plusfp_20220908_16"
+kraken_memory: 16GB
 # This is on a fast SSD, shovill faster
 shovill_tempdir: "/tmp"
 # set the amount of mem per assembly for shovill in GB
