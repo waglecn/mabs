@@ -7,7 +7,7 @@ gatk3_jar_url: "https://storage.googleapis.com/gatk-software/package-archive/gat
 data_dir: "/media/nick/8TB/SGL_MA/"
 # Replace this with the sample sheet for your own samples, see provided example
 # for the format
-sample_sheet: "samples.test.yaml"
+sample_sheet: "samples.yaml"
 # copied from a local installation of Trimmomatic - don't know where the
 # adapter files live in conda-land
 adapters_fasta: "workflow/resources/TruSeq3-PE.fa"
@@ -41,7 +41,7 @@ outgroup_assembly: "GCF_000195955.2"
 # directroy for all results
 results_dir: "results"
 # default mash taxa bolletii, mmas, abscessus
-mash_ref_taxa: 
+ref_taxa: 
     'mbolletii': 'GCF_003609715.1'
     'mmassiliense': 'GCF_000497265.2'
     'mabscessus': 'GCF_000069185.1'
