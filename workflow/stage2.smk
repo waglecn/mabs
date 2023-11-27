@@ -1,7 +1,7 @@
 # need to handle both long and short reads in stage2
 import yaml
 try:
-    stage2 = yaml.safe_load(open(f"{res}/stage2test.yaml"))
+    stage2 = yaml.safe_load(open(f"{res}/stage2.yaml"))
     print(stage2)
 except FileNotFoundError as e:
     print("stage2 not configured yet", file=sys.stderr)

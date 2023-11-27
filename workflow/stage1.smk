@@ -312,6 +312,8 @@ rule pre_nano_QC:
 # Kraken2 contamination on the merged raw paired input
 rule kraken2_contamination_raw_paired:
     threads: 1
+    resources:
+        mem=config['kraken_memory']
     conda:
         "envs/kraken2.yaml"
     input:
@@ -333,6 +335,8 @@ rule kraken2_contamination_raw_paired:
 # Kraken2 contamination on the merged raw paired input
 rule kraken2_contamination_trim_paired:
     threads: 1
+    resources:
+        mem=config['kraken_memory']
     conda:
         "envs/kraken2.yaml"
     input:
@@ -351,6 +355,8 @@ rule kraken2_contamination_trim_paired:
 
 rule kraken2_contamination_single:
     threads: 1
+    resources:
+        mem=config['kraken_memory']
     conda:
         "envs/kraken2.yaml"
     input:
@@ -452,6 +458,8 @@ rule dflye_short_polish_assembly:
 # Kraken2 contamination of assembly
 rule kraken2_contamination_assembly:
     threads: 1
+    resources:
+        mem=config['kraken_memory']
     conda:
         "envs/kraken2.yaml"
     input:
@@ -468,6 +476,8 @@ rule kraken2_contamination_assembly:
 
 rule kraken2_contamination_long_assembly:
     threads: 1
+    resources:
+        mem=config['kraken_memory']
     conda:
         "envs/kraken2.yaml"
     input:
