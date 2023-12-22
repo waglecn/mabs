@@ -1,6 +1,6 @@
 import yaml
 try:
-    stage2 = yaml.safe_load(open(f"{res}/stage2test.yaml"))
+    stage2 = yaml.safe_load(open(f"{res}/stage2.yaml"))
     print(stage2)
 except FileNotFoundError as e:
     print("stage2 not configured yet", file=sys.stderr)
@@ -126,6 +126,7 @@ rule merge_per_sample_short_beds:
     conda:
         "envs/bwa.yaml"
     input:
+        dummybed = f"workflow/resources/dummy.bed",
         gubbinsbed = f"{res}/gubbins/{{ref}}.gubbins.bed",
         PEbed = f"workflow/resources/alignment_references/{{ref}}.PE_PPE.bed",
         maskbed = f"{res}/samples/{{s}}/map/{{ref}}/{{long_short}}.mask.bed",
@@ -133,7 +134,8 @@ rule merge_per_sample_short_beds:
     output:
         f"{res}/samples/{{s}}/map/{{ref}}/{{long_short}}_final.bed"
     shell:
-        "cat {input.maskbed} {input.DFbed} {input.gubbinsbed} {input.PEbed} | "
+        "cat {input.dummybed} {input.maskbed} {input.DFbed} "
+        "{input.gubbinsbed} {input.PEbed} | "
         "bedtools sort -i stdin | bedtools merge -i stdin -c 4 "
         "-o distinct_only > {output}"
 
